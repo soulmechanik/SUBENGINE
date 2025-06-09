@@ -1,0 +1,175 @@
+.container {
+  max-width: 500px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.summary {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.summaryItem {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.summaryLabel {
+  font-weight: 500;
+  color: #495057;
+}
+
+.summaryValue {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.formGroup {
+  margin-bottom: 1.25rem;
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  &:focus {
+    outline: none;
+    border-color: #4dabf7;
+    box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.2);
+  }
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: #868e96;
+  margin-top: 0.25rem;
+}
+
+.button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #228be6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  &:hover {
+    background: #1c7ed6;
+  }
+  &:disabled {
+    background: #adb5bd;
+    cursor: not-allowed;
+  }
+}
+
+.buttonDisabled {
+  @extend .button;
+  background: #adb5bd;
+  cursor: not-allowed;
+}
+
+.spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 0.5rem;
+}
+
+.error {
+  color: #e03131;
+  background: #fff5f5;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  border: 1px solid #ffc9c9;
+}
+
+/* Skeleton Loading Styles */
+.skeletonHeader {
+  height: 2rem;
+  background: #e9ecef;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  width: 60%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.skeletonInfo {
+  height: 1rem;
+  background: #e9ecef;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  width: 80%;
+  &:last-child {
+    width: 60%;
+  }
+}
+
+.skeletonFormGroup {
+  margin-bottom: 1.25rem;
+}
+
+.skeletonLabel {
+  height: 0.875rem;
+  background: #e9ecef;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  width: 40%;
+}
+
+.skeletonInput {
+  height: 2.5rem;
+  background: #e9ecef;
+  border-radius: 6px;
+}
+
+.skeletonButton {
+  height: 2.75rem;
+  background: #e9ecef;
+  border-radius: 6px;
+  margin-top: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
