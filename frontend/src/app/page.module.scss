@@ -1,0 +1,472 @@
+// Tech-inspired Color Scheme
+$primary: #0096ff; // Electric blue
+$secondary: #003366; // Deep blue
+$dark: #0a0a12; // Almost black
+$darker: #06060a; // Darker background
+$light: #e0e0e0; // Light text
+$lighter: #ffffff; // White
+$accent: #00d4ff; // Cyan accent
+
+// Tech Elements
+$glow: 0 0 10px rgba($primary, 0.7);
+
+// Fonts
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Inter:wght@400;500;700;900&display=swap');
+
+.container {
+  min-height: 100vh;
+  background-color: $dark;
+  color: $light;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.circuitBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(to right, rgba($primary, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba($primary, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 5%;
+  position: relative;
+  z-index: 10;
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0;
+      color: $primary;
+      font-family: 'Roboto Mono', monospace;
+      letter-spacing: 1px;
+    }
+
+    .logoIcon {
+      font-size: 2rem !important;
+      color: $primary;
+    }
+  }
+}
+
+.ctaButton {
+  background-color: transparent;
+  color: $primary;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  font-family: 'Roboto Mono', monospace;
+  border: 1px solid $primary;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+
+  &:hover {
+    background-color: rgba($primary, 0.1);
+    box-shadow: $glow;
+  }
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 6rem 5% 8rem;
+  position: relative;
+  z-index: 5;
+
+  .heroContent {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+
+    .techBadge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background-color: rgba($primary, 0.1);
+      color: $primary;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      font-family: 'Roboto Mono', monospace;
+      border: 1px solid rgba($primary, 0.3);
+    }
+
+    h1 {
+      font-size: 3.5rem;
+      font-weight: 900;
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+      background: linear-gradient(to right, $light, $lighter);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+
+      span {
+        color: $primary;
+        -webkit-text-fill-color: $primary;
+      }
+
+      @media (max-width: 768px) {
+        font-size: 2.5rem;
+      }
+    }
+
+    .subtitle {
+      font-size: 1.2rem;
+      color: rgba($light, 0.8);
+      max-width: 700px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+  }
+
+  .heroButtons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 3rem;
+    flex-wrap: wrap;
+  }
+}
+
+.techElements {
+  margin-top: 4rem;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+
+  .codeSnippet {
+    background-color: $darker;
+    border: 1px solid rgba($primary, 0.2);
+    border-radius: 8px;
+    padding: 1.5rem;
+    max-width: 400px;
+    text-align: left;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+    pre {
+      margin: 0;
+      overflow-x: auto;
+    }
+
+    code {
+      font-family: 'Roboto Mono', monospace;
+      color: $primary;
+      line-height: 1.8;
+      font-size: 0.9rem;
+      display: block;
+    }
+  }
+
+  .dataGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    width: 200px;
+    height: 200px;
+
+    .dataCell {
+      background-color: rgba($primary, 0.1);
+      border: 1px solid rgba($primary, 0.2);
+      border-radius: 4px;
+    }
+  }
+}
+
+.primaryButton {
+  background-color: $primary;
+  color: $darker;
+  padding: 1rem 2rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  font-family: 'Roboto Mono', monospace;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  border: none;
+  letter-spacing: 0.5px;
+
+  &:hover {
+    box-shadow: $glow;
+    transform: translateY(-2px);
+  }
+}
+
+.secondaryButton {
+  background-color: transparent;
+  color: $primary;
+  padding: 1rem 2rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  font-family: 'Roboto Mono', monospace;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  border: 1px solid $primary;
+  letter-spacing: 0.5px;
+
+  &:hover {
+    background-color: rgba($primary, 0.1);
+    box-shadow: $glow;
+  }
+}
+
+.features {
+  padding: 6rem 5%;
+  background-color: $darker;
+  position: relative;
+  z-index: 2;
+
+  h3 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: $light;
+
+    svg {
+      color: $primary;
+    }
+  }
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.featureCard {
+  background-color: rgba($dark, 0.8);
+  padding: 2.5rem 2rem;
+  border-radius: 8px;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: 1px solid rgba($primary, 0.1);
+  position: relative;
+  overflow: hidden;
+
+  .featureIcon {
+    font-size: 3rem !important;
+    margin-bottom: 1.5rem;
+    color: $primary;
+  }
+
+  h4 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: $light;
+  }
+
+  p {
+    color: rgba($light, 0.7);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .techTag {
+    display: inline-block;
+    background-color: rgba($primary, 0.1);
+    color: $primary;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-family: 'Roboto Mono', monospace;
+    border: 1px solid rgba($primary, 0.3);
+  }
+}
+
+.howItWorks {
+  padding: 6rem 5%;
+  background-color: $dark;
+  position: relative;
+
+  h3 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: $light;
+
+    svg {
+      color: $primary;
+    }
+  }
+}
+
+.architecture {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.architectureStep {
+  flex: 1;
+  min-width: 200px;
+  text-align: center;
+  padding: 2rem 1.5rem;
+  background-color: rgba($darker, 0.8);
+  border-radius: 8px;
+  border: 1px solid rgba($primary, 0.1);
+  position: relative;
+
+  .stepNumber {
+    width: 40px;
+    height: 40px;
+    background-color: $primary;
+    color: $dark;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin: 0 auto 1.5rem;
+    font-family: 'Roboto Mono', monospace;
+  }
+
+  h4 {
+    color: $light;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: rgba($light, 0.7);
+    font-size: 0.9rem;
+  }
+}
+
+.architectureLine {
+  width: 50px;
+  height: 2px;
+  background-color: rgba($primary, 0.3);
+  margin-top: 20px;
+  position: relative;
+
+  &::after {
+    content: '→';
+    position: absolute;
+    right: -10px;
+    top: -10px;
+    color: $primary;
+  }
+
+  @media (max-width: 768px) {
+    width: 2px;
+    height: 50px;
+
+    &::after {
+      content: '↓';
+      right: -5px;
+      top: auto;
+      bottom: -10px;
+    }
+  }
+}
+
+.footer {
+  background-color: $darker;
+  padding: 4rem 5% 2rem;
+  position: relative;
+  z-index: 2;
+  border-top: 1px solid rgba($primary, 0.1);
+
+  .footerContent {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-bottom: 3rem;
+  }
+
+  .footerLogo {
+    h3 {
+      color: $primary;
+      font-family: 'Roboto Mono', monospace;
+      margin: 0.5rem 0 0.2rem;
+    }
+
+    p {
+      color: rgba($light, 0.6);
+      font-size: 0.9rem;
+      margin: 0;
+    }
+
+    svg {
+      color: $primary;
+      font-size: 2rem !important;
+    }
+  }
+
+  .footerLinks {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+
+    a {
+      color: rgba($light, 0.7);
+      text-decoration: none;
+      transition: color 0.3s ease;
+      font-size: 0.9rem;
+
+      &:hover {
+        color: $primary;
+      }
+    }
+  }
+
+  .copyright {
+    text-align: center;
+    color: rgba($light, 0.5);
+    font-size: 0.8rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba($primary, 0.1);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}
