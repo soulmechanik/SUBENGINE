@@ -36,43 +36,44 @@ export default function SubscribePage() {
     console.log('Payment Closed:', response)
   }
 
-  const handleOnSuccess = async (response) => {
-    console.log('Payment Success:', response)
-    setSaving(true)
-    setError(null)
+const handleOnSuccess = async (response) => {
+  console.log('Payment Success:', response)
+  setSaving(true)
+  setError(null)
 
-    const paymentData = {
-      telegramId,
-      groupId,
-      amount: Number(amount),
-      duration,
-      email,
-    }
-
-    try {
-      const res = await fetch('/api/payments/record', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paymentData),
-      })
-
-      if (!res.ok) {
-        throw new Error('Failed to save payment on server')
-      }
-
-      router.push({
-        pathname: '/subscribe/success',
-        query: {
-          groupId,
-          amount,
-        },
-      })
-    } catch (err) {
-      console.error('Error saving payment:', err)
-      setError('Could not verify payment at this time. Please contact support or try again.')
-      setSaving(false)
-    }
+  const paymentData = {
+    telegramId,
+    groupId,
+    amount: Number(amount),
+    duration,
+    email,
   }
+
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(paymentData),
+    })
+
+    if (!res.ok) {
+      throw new Error('Failed to save payment on server')
+    }
+
+    router.push({
+      pathname: '/subscribe/success',
+      query: {
+        groupId,
+        amount,
+      },
+    })
+  } catch (err) {
+    console.error('Error saving payment:', err)
+    setError('Could not verify payment at this time. Please contact support or try again.')
+    setSaving(false)
+  }
+}
+
 
   const handlePay = () => {
     if (
