@@ -40,35 +40,56 @@ export default function SubscribePage() {
     }
   }
 
-  const handleOnSuccess = async (response) => {
-    console.log('Payment Success:', response)
-    setIsProcessing(false)
-    setIsSuccess(true)
-    setError(null)
-    
-    // Show optimistic success feedback
-    alert('Payment successful! Redirecting...')
+const handleOnSuccess = async (response) => {
+  console.log('Payment Success:', response)
+  setIsProcessing(true) // still processing
+  setError(null)
 
-    const paymentData = {
-      telegramId,
-      groupId,
-      amount: Number(amount),
-      duration,
-      email,
-      reference: response?.reference,
+  const paymentData = {
+    telegramId,
+    groupId,
+    amount: Number(amount),
+    duration,
+    email,
+    reference: response?.reference,
+
+  }
+
+  try {
+    // Save the payment record
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(paymentData),
+    })
+
+    if (!res.ok) {
+      throw new Error('Failed to save payment on server')
     }
 
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paymentData),
+    // Poll the backend until status is "successful"
+    const checkStatus = async () => {
+      const statusRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/status?ref=${response.reference}`, {
+        credentials: 'include',
       })
+      const statusData = await statusRes.json()
+      return statusData.status
+    }
 
-      if (!res.ok) {
-        throw new Error('Failed to save payment on server')
-      }
+    const maxAttempts = 10
+    let attempts = 0
+    let status = 'pending'
 
+    while (attempts < maxAttempts) {
+      status = await checkStatus()
+      if (status === 'successful') break
+      await new Promise(resolve => setTimeout(resolve, 2000)) // wait 2 seconds
+      attempts++
+    }
+
+    if (status === 'successful') {
+      setIsSuccess(true)
+      setIsProcessing(false)
       router.push({
         pathname: '/subscribe/success',
         query: {
@@ -76,50 +97,72 @@ export default function SubscribePage() {
           amount,
         },
       })
-    } catch (err) {
-      console.error('Error saving payment:', err)
-      setError('Payment was successful but we encountered an issue recording it. Please contact support with your payment reference.')
+    } else {
+      setError('Payment was made but could not be confirmed yet. Please refresh this page in a few seconds.')
       setIsProcessing(false)
-      setIsSuccess(false)
     }
+
+  } catch (err) {
+    console.error('Error saving payment:', err)
+    setError('Payment was successful but we encountered an issue recording it. Please contact support with your payment reference.')
+    setIsProcessing(false)
+    setIsSuccess(false)
+  }
+}
+
+
+const handlePay = async () => {
+  if (isSuccess) return
+
+  if (
+    !amount || !email || !phone || !firstName || !lastName ||
+    !groupId || !telegramId || !duration
+  ) {
+    alert('Missing required information. Please fill all fields.')
+    return
   }
 
-  const handlePay = () => {
-    if (isSuccess) return // Prevent any action if already successful
+  let formattedPhone = phone.trim()
+  if (formattedPhone.startsWith('0')) {
+    formattedPhone = '+234' + formattedPhone.slice(1)
+  }
 
-    if (
-      !amount ||
-      !email ||
-      !phone ||
-      !firstName ||
-      !lastName ||
-      !groupId ||
-      !telegramId ||
-      !duration
-    ) {
-      alert('Missing required information. Please fill all fields.')
-      return
+  if (!/^\+234\d{10}$/.test(formattedPhone)) {
+    alert('Please enter a valid Nigerian phone number.')
+    return
+  }
+
+  const merchantKey = process.env.NEXT_PUBLIC_BANI_PUBLIC_KEY
+  if (!merchantKey) {
+    alert('Merchant key is missing. Please contact support.')
+    return
+  }
+
+  setIsProcessing(true)
+
+  try {
+    // Step 1: Save the payment INITIALLY (status = 'pending')
+    const recordRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegramId,
+        groupId,
+        amount: Number(amount),
+        duration,
+        email,
+        reference: 'pending-temp', // or generate client-side UUID or leave it out if backend will assign
+        phone: formattedPhone,
+        firstName,
+        lastName
+      }),
+    })
+
+    if (!recordRes.ok) {
+      throw new Error('Failed to initialize payment on server')
     }
 
-    let formattedPhone = phone.trim()
-    if (formattedPhone.startsWith('0')) {
-      formattedPhone = '+234' + formattedPhone.slice(1)
-    }
-
-    if (!/^\+234\d{10}$/.test(formattedPhone)) {
-      alert('Please enter a valid Nigerian phone number.')
-      return
-    }
-
-    const merchantKey = process.env.NEXT_PUBLIC_BANI_PUBLIC_KEY
-    console.log('🔑 Bani Merchant Key:', merchantKey)
-
-    if (!merchantKey) {
-      alert('Merchant key is missing. Please contact support.')
-      return
-    }
-
-    setIsProcessing(true)
+    // Step 2: Launch Bani modal AFTER recording it
     BaniPopUp({
       amount: amount.toString(),
       email,
@@ -131,7 +174,14 @@ export default function SubscribePage() {
       onClose: handleOnClose,
       callback: handleOnSuccess,
     })
+
+  } catch (err) {
+    console.error('Error initiating payment:', err)
+    setError('Failed to initialize payment. Please try again.')
+    setIsProcessing(false)
   }
+}
+
 
   if (loading || !mounted) {
     return (
