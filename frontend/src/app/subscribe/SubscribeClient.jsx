@@ -47,6 +47,7 @@ const handleOnSuccess = async (response) => {
     amount: Number(amount),
     duration,
     email,
+        reference: response?.reference, // ✅ ADD THIS
   }
 
   try {
