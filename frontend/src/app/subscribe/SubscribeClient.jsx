@@ -12,7 +12,8 @@ export default function SubscribePage() {
 
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState(null)
 
   const groupId = searchParams.get('groupId')
@@ -34,49 +35,58 @@ export default function SubscribePage() {
 
   const handleOnClose = (response) => {
     console.log('Payment Closed:', response)
+    if (!isSuccess) {
+      setIsProcessing(false) // Only reset if not successful
+    }
   }
 
-const handleOnSuccess = async (response) => {
-  console.log('Payment Success:', response)
-  setSaving(true)
-  setError(null)
+  const handleOnSuccess = async (response) => {
+    console.log('Payment Success:', response)
+    setIsProcessing(false)
+    setIsSuccess(true)
+    setError(null)
+    
+    // Show optimistic success feedback
+    alert('Payment successful! Redirecting...')
 
-  const paymentData = {
-    telegramId,
-    groupId,
-    amount: Number(amount),
-    duration,
-    email,
-        reference: response?.reference, // ✅ ADD THIS
-  }
-
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(paymentData),
-    })
-
-    if (!res.ok) {
-      throw new Error('Failed to save payment on server')
+    const paymentData = {
+      telegramId,
+      groupId,
+      amount: Number(amount),
+      duration,
+      email,
+      reference: response?.reference,
     }
 
-    router.push({
-      pathname: '/subscribe/success',
-      query: {
-        groupId,
-        amount,
-      },
-    })
-  } catch (err) {
-    console.error('Error saving payment:', err)
-    setError('Could not verify payment at this time. Please contact support or try again.')
-    setSaving(false)
-  }
-}
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentData),
+      })
 
+      if (!res.ok) {
+        throw new Error('Failed to save payment on server')
+      }
+
+      router.push({
+        pathname: '/subscribe/success',
+        query: {
+          groupId,
+          amount,
+        },
+      })
+    } catch (err) {
+      console.error('Error saving payment:', err)
+      setError('Payment was successful but we encountered an issue recording it. Please contact support with your payment reference.')
+      setIsProcessing(false)
+      setIsSuccess(false)
+    }
+  }
 
   const handlePay = () => {
+    if (isSuccess) return // Prevent any action if already successful
+
     if (
       !amount ||
       !email ||
@@ -109,6 +119,7 @@ const handleOnSuccess = async (response) => {
       return
     }
 
+    setIsProcessing(true)
     BaniPopUp({
       amount: amount.toString(),
       email,
@@ -170,6 +181,7 @@ const handleOnSuccess = async (response) => {
           placeholder="John"
           className={styles.input}
           required
+          disabled={isSuccess}
         />
       </div>
 
@@ -185,6 +197,7 @@ const handleOnSuccess = async (response) => {
           placeholder="Doe"
           className={styles.input}
           required
+          disabled={isSuccess}
         />
       </div>
 
@@ -200,6 +213,7 @@ const handleOnSuccess = async (response) => {
           placeholder="you@example.com"
           className={styles.input}
           required
+          disabled={isSuccess}
         />
       </div>
 
@@ -215,6 +229,7 @@ const handleOnSuccess = async (response) => {
           placeholder="e.g. 08000111111"
           className={styles.input}
           required
+          disabled={isSuccess}
         />
         <p className={styles.hint}>We'll convert it to international format (+234...)</p>
       </div>
@@ -223,10 +238,16 @@ const handleOnSuccess = async (response) => {
 
       <button
         onClick={handlePay}
-        disabled={saving}
-        className={saving ? styles.buttonDisabled : styles.button}
+        disabled={isProcessing || isSuccess}
+        className={
+          isSuccess ? styles.buttonSuccess : 
+          isProcessing ? styles.buttonDisabled : 
+          styles.button
+        }
       >
-        {saving ? (
+        {isSuccess ? (
+          'Payment Successful!'
+        ) : isProcessing ? (
           <>
             <span className={styles.spinner}></span>
             Processing Payment...
