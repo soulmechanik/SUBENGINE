@@ -9,6 +9,13 @@ const paymentSchema = new mongoose.Schema({
   email: { type: String, required: true },  // new field
   status: { type: String, enum: ['pending', 'successful'], default: 'pending' },
   paidAt: Date,
+  
+  subscriptionStatus: {
+  type: String,
+  enum: ['active', 'expired'],
+  default: 'active',
+},
+  
 
   commission: Number, // e.g. 5% of amount
   netAmount: Number, // amount - commission

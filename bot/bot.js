@@ -8,6 +8,8 @@ const Group = require('../backend/models/Group');
 dotenv.config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
+
+const checkSubscriptions = require('../backend/utils/subscriptionChecker');
 const sessions = {};
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -23,6 +25,34 @@ bot.use((ctx, next) => {
 // Helper function to generate subscription link
 function generateSubscriptionLink(groupId) {
   return `https://t.me/${process.env.BOT_USERNAME}?start=subscribe_${groupId}`;
+}
+
+
+
+
+
+
+
+
+// Helper function to create group invite link and save to DB
+async function createAndSaveGroupInviteLink(ctx, groupId) {
+  try {
+    // Create new invite link
+    const inviteLink = await ctx.telegram.createChatInviteLink(groupId, {
+      creates_join_request: true,
+    });
+    
+    // Update group in DB with invite link
+    await Group.findOneAndUpdate(
+      { groupId },
+      { inviteLink: inviteLink.invite_link }
+    );
+    
+    return inviteLink.invite_link;
+  } catch (err) {
+    console.error('Error creating/saving invite link:', err);
+    return null;
+  }
 }
 
 // Helper function to show group list
@@ -234,6 +264,11 @@ bot.on('callback_query', async (ctx) => {
       message += `\n🔗 Subscription Link:\n${subLink}`;
     }
 
+    // Add invite link if available
+    if (group.inviteLink) {
+      message += `\n📨 Group Invite Link:\n${group.inviteLink}`;
+    }
+
     ctx.session.selectedGroupId = groupId;
 
     return ctx.reply(message, {
@@ -282,6 +317,10 @@ bot.on('callback_query', async (ctx) => {
     try {
       // Save bank details and generate subscription link
       const subLink = generateSubscriptionLink(selectedGroupId);
+      
+      // Create and save invite link
+      const inviteLink = await createAndSaveGroupInviteLink(ctx, selectedGroupId);
+      
       await Group.findOneAndUpdate(
         { groupId: selectedGroupId },
         {
@@ -289,7 +328,8 @@ bot.on('callback_query', async (ctx) => {
           accountNumber: verifiedAccount.accountNumber,
           bankName: verifiedAccount.bankName,
           bankCode: verifiedAccount.bankCode,
-          subLink
+          subLink,
+          inviteLink
         }
       );
 
@@ -303,7 +343,8 @@ bot.on('callback_query', async (ctx) => {
         `🏷️ Name: ${group.groupTitle}\n` +
         `💰 Subscription Amount: ₦${group.subscriptionAmount}\n` +
         `⏳ Duration: ${group.subscriptionDuration}\n\n` +
-        `🔗 Share this subscription link with your members:\n${subLink}`,
+        `🔗 Share this subscription link with your members:\n${subLink}\n\n` +
+        `📨 Group Invite Link:\n${inviteLink}`,
         {
           reply_markup: {
             inline_keyboard: [
@@ -652,9 +693,108 @@ bot.on('text', async (ctx) => {
   }
 });
 
+
+
+setInterval(async () => {
+  console.log('⏱️ Running scheduled subscription check...');
+  const expiredUsers = await checkSubscriptions();
+
+  for (const user of expiredUsers) {
+    try {
+      await bot.telegram.banChatMember(user.groupId, user.telegramId);
+      console.log(`🚫 Banned user ${user.telegramId} from group ${user.groupId}`);
+    } catch (error) {
+      console.error(`❌ Error banning user ${user.telegramId}: ${error.description}`);
+    }
+  }
+}, 1000 * 60 * 10); // every 10 minutes
+
+
 // ===================== EVENT HANDLERS ===================== //
 
-bot.on('my_chat_member', myChatMemberHandler);
+bot.on('my_chat_member', async (ctx) => {
+  try {
+    const chatMember = ctx.myChatMember;
+    const chat = chatMember.chat;
+    const newStatus = chatMember.new_chat_member.status;
+    const oldStatus = chatMember.old_chat_member.status;
+
+    // Only proceed if the bot was added to a group (not private chat)
+    if (chat.type === 'private') return;
+
+    // Check if the bot was promoted to admin (from non-admin)
+    if (newStatus === 'administrator' && oldStatus !== 'administrator') {
+      const userId = String(chatMember.from.id);
+      const user = await User.findOne({ telegramId: userId, isGroupOwner: true });
+
+      if (!user) {
+        console.log(`User ${userId} is not a registered group owner`);
+        return;
+      }
+
+      // Check if group already exists
+      const existingGroup = await Group.findOne({ groupId: String(chat.id) });
+      if (existingGroup) {
+        console.log(`Group ${chat.id} already exists in database`);
+        return;
+      }
+
+      // Create new group record
+      const newGroup = new Group({
+        groupId: String(chat.id),
+        groupTitle: chat.title,
+        owner: user._id,
+        subscriptionAmount: 0,
+        subscriptionDuration: 'monthly', // Set default value
+        accountName: '',
+        accountNumber: '',
+        bankName: '',
+        bankCode: '',
+        subLink: '',
+        inviteLink: ''
+      });
+
+      await newGroup.save();
+
+      // Create and save invite link
+      const inviteLink = await createAndSaveGroupInviteLink(ctx, String(chat.id));
+      await Group.findOneAndUpdate(
+        { groupId: String(chat.id) },
+        { inviteLink }
+      );
+
+      console.log(`New group created: ${chat.title} (${chat.id})`);
+
+      // Send confirmation message to group owner
+      try {
+        await ctx.telegram.sendMessage(
+          userId,
+          `✅ Successfully added to group: ${chat.title}\n\n` +
+          `You can now configure your group settings to start accepting payments.`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '⚙️ Configure Group', callback_data: 'back_to_groups' }]
+              ]
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Failed to send confirmation message:', error);
+      }
+    }
+
+    // Check if the bot was removed from admin or kicked from group
+    if ((newStatus === 'member' && oldStatus === 'administrator') || 
+        newStatus === 'kicked' || newStatus === 'left') {
+      // Remove group from database
+      await Group.deleteOne({ groupId: String(chat.id) });
+      console.log(`Group ${chat.id} removed from database`);
+    }
+  } catch (err) {
+    console.error('Error in my_chat_member handler:', err);
+  }
+});
 
 bot.catch((err, ctx) => {
   console.error('Bot error:', err);
