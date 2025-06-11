@@ -56,3 +56,25 @@ exports.recordPayment = async (req, res) => {
     return res.status(500).json({ error: 'Server error' });
   }
 };
+
+
+exports.getPaymentStatus = async (req, res) => {
+  const reference = req.query.reference;
+
+  if (!reference) {
+    return res.status(400).json({ error: 'Missing reference' });
+  }
+
+  try {
+    const payment = await Payment.findOne({ reference });
+
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    return res.status(200).json({ status: payment.status });
+  } catch (err) {
+    console.error('Error fetching payment status:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
