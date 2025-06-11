@@ -1,37 +1,31 @@
 'use client'
 
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import useCheckout from 'bani-react'
 import { useEffect, useState } from 'react'
 import styles from './subscribe.module.scss'
 
 export default function SubscribePage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const { BaniPopUp } = useCheckout()
 
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [paymentStatus, setPaymentStatus] = useState('idle') // 'idle' | 'processing' | 'success' | 'failed'
+  const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState(null)
-  const [paymentData, setPaymentData] = useState(null)
 
-  // Get parameters from URL
   const groupId = searchParams.get('groupId')
   const groupName = searchParams.get('groupName') || ''
   const amount = searchParams.get('amount')
   const duration = searchParams.get('duration')
   const telegramId = searchParams.get('userId') || ''
 
-  // Form state
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [address, setAddress] = useState('')
-  const [city, setCity] = useState('')
-  const [state, setState] = useState('')
-  const [country, setCountry] = useState('Nigeria')
 
   const reference = `BNI-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
@@ -41,20 +35,42 @@ export default function SubscribePage() {
     return () => clearTimeout(timer)
   }, [])
 
+  const handleOnClose = (response) => {
+    console.log('Payment closed:', response)
+    if (!isSuccess) {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleOnSuccess = async (response) => {
+    try {
+      router.push({
+        pathname: '/subscribe/success',
+        query: {
+          reference: response.reference,
+          groupId,
+          amount,
+          telegramId,
+        },
+      })
+    } catch (err) {
+      console.error('Redirect error:', err)
+      setError('Payment succeeded, but redirection failed. Reference: ' + response.reference)
+      setIsProcessing(false)
+    }
+  }
+
   const validateInputs = () => {
-    // Required fields validation
-    if (!amount || !email || !phone || !firstName || !lastName || !address || !city || !state) {
+    if (!amount || !email || !phone || !firstName || !lastName) {
       alert('Please fill all required fields')
       return false
     }
 
-    // Email validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       alert('Please enter a valid email address')
       return false
     }
 
-    // Phone number validation and formatting
     let formattedPhone = phone.trim()
     if (formattedPhone.startsWith('0')) {
       formattedPhone = '+234' + formattedPhone.slice(1)
@@ -65,195 +81,90 @@ export default function SubscribePage() {
       return false
     }
 
-    return {
-      formattedPhone,
-      customerData: {
-        email,
-        phone: formattedPhone,
-        firstName,
-        lastName,
-        address,
-        city,
-        state,
-        country
-      }
+    return formattedPhone
+  }
+
+  const handlePay = async () => {
+    if (isSuccess) return
+
+    const formattedPhone = validateInputs()
+    if (!formattedPhone) return
+
+    const merchantKey = process.env.NEXT_PUBLIC_BANI_PUBLIC_KEY
+    if (!merchantKey) {
+      alert('Payment system error. Please contact support.')
+      return
     }
-  }
 
-  const handlePaymentSuccess = (response) => {
-    setPaymentStatus('success')
-    setPaymentData({
-      reference: response.reference,
-      amount,
-      groupName,
-      date: new Date().toLocaleString()
-    })
-    setIsProcessing(false)
-  }
+    setIsProcessing(true)
+    setError(null)
 
-  const handlePaymentFailure = (message) => {
-    setPaymentStatus('failed')
-    setError(message || 'Payment failed. Please try again.')
-    setIsProcessing(false)
-  }
-
- const handlePay = async () => {
-  if (paymentStatus === 'success') return
-
-  const validation = validateInputs()
-  if (!validation) return
-
-  const { formattedPhone, customerData } = validation
-
-  const merchantKey = process.env.NEXT_PUBLIC_BANI_PUBLIC_KEY
-  if (!merchantKey) {
-    alert('Payment system error. Please contact support.')
-    return
-  }
-
-  setIsProcessing(true)
-  setPaymentStatus('processing')
-  setError(null)
-
-  try {
-    // Record payment in backend
-    const recordRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        reference,
-        telegramId,
-        group: groupId,
-        amount: Number(amount),
-        duration,
-        customer: {
+    try {
+      const recordRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference,
+          telegramId,
+          group: groupId,
+          amount: Number(amount),
+          duration,
           email,
           phone: formattedPhone,
           firstName,
-          lastName
+          lastName,
+          status: 'pending'
+        }),
+      })
+
+      if (!recordRes.ok) {
+        throw new Error(await recordRes.text() || 'Failed to initialize payment')
+      }
+
+      const { payment } = await recordRes.json()
+
+      BaniPopUp({
+        amount: amount.toString(),
+        email,
+        phoneNumber: formattedPhone,
+        firstName,
+        lastName,
+        merchantKey,
+        merchantRef: reference,
+        metadata: {
+          telegramId,
+          groupId,
+          duration,
+          internalReference: reference
         },
-        status: 'pending'
-      }),
-    })
-
-    if (!recordRes.ok) {
-      throw new Error(await recordRes.text() || 'Failed to initialize payment')
-    }
-
-    // Launch Bani popup
-    BaniPopUp({
-      amount: amount.toString(),
-      email,
-      phoneNumber: formattedPhone,
-      firstName,
-      lastName,
-      merchantKey,
-      merchantRef: reference,
-      metadata: {
-        telegramId,
-        groupId,
-        duration,
-        internalReference: reference
-      },
-      callback: (response) => {
-        console.log('Bani callback:', response)
-
-        if (['successful', 'completed', 'paid'].includes(response.status)) {
-          handlePaymentSuccess(response)
-        } else if (['pending', 'payment_processing'].includes(response.status)) {
-          startPaymentVerification(response.reference)
-        } else {
-          handlePaymentFailure(response.message || 'Payment could not be completed')
+        onClose: handleOnClose,
+        callback: (response) => {
+          console.log('Bani callback:', response)
+          if (['successful', 'pending'].includes(response.status)) {
+            handleOnSuccess(response)
+          } else {
+            if (!isSuccess) {
+              setIsProcessing(false)
+              setError('Payment failed or was cancelled')
+            }
+          }
         }
-      }
-    })
+      })
 
-  } catch (err) {
-    console.error('Payment error:', err)
-    handlePaymentFailure(err.message || 'An unexpected error occurred')
-  }
-}
-
-
-  const startPaymentVerification = (paymentRef) => {
-    let intervalId
-
-    const verifyPayment = async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reference: paymentRef })
-        })
-
-        const data = await res.json()
-        
-        if (data.status === 'successful') {
-          handlePaymentSuccess(data)
-          clearInterval(intervalId)
-        } else if (['failed', 'cancelled'].includes(data.status)) {
-          handlePaymentFailure(data.message || 'Payment verification failed')
-          clearInterval(intervalId)
-        }
-      } catch (err) {
-        console.error('Verification error:', err)
-      }
+    } catch (err) {
+      console.error('Payment initiation error:', err)
+      setError(err.message || 'Failed to start payment process. Please try again.')
+      setIsProcessing(false)
     }
-
-    // Check immediately and then every 5 seconds
-    verifyPayment()
-    intervalId = setInterval(verifyPayment, 5000)
-    
-    // Cleanup function
-    return () => clearInterval(intervalId)
-  }
-
-  const resetPayment = () => {
-    setPaymentStatus('idle')
-    setPaymentData(null)
-    setError(null)
   }
 
   if (loading || !mounted) {
     return (
       <div className={styles.container}>
         <div className={styles.skeletonHeader}></div>
-        {[...Array(10)].map((_, i) => (
+        {[...Array(7)].map((_, i) => (
           <div key={i} className={styles.skeletonLine}></div>
         ))}
-      </div>
-    )
-  }
-
-  if (paymentStatus === 'success') {
-    return (
-      <div className={styles.container}>
-        <div className={styles.successMessage}>
-          <h1>🎉 Payment Successful!</h1>
-          <p>You've successfully subscribed to {groupName}.</p>
-          
-          <div className={styles.paymentDetails}>
-            <div className={styles.detailRow}>
-              <span>Reference:</span>
-              <span>{paymentData.reference}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span>Amount:</span>
-              <span>₦{paymentData.amount}</span>
-            </div>
-            <div className={styles.detailRow}>
-              <span>Date:</span>
-              <span>{paymentData.date}</span>
-            </div>
-          </div>
-
-          <button 
-            onClick={resetPayment}
-            className={styles.returnButton}
-          >
-            Make Another Payment
-          </button>
-        </div>
       </div>
     )
   }
@@ -267,22 +178,13 @@ export default function SubscribePage() {
         <div><span>Duration:</span> {duration} month(s)</div>
       </div>
 
-      {paymentStatus === 'failed' && (
-        <div className={styles.errorMessage}>
-          <p>⚠️ {error}</p>
-          <button onClick={resetPayment} className={styles.tryAgainButton}>
-            Try Again
-          </button>
-        </div>
-      )}
-
       <div className={styles.formGroup}>
         <label>First Name *</label>
         <input
           type="text"
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
-          disabled={isProcessing}
+          disabled={isProcessing || isSuccess}
           required
         />
       </div>
@@ -293,18 +195,18 @@ export default function SubscribePage() {
           type="text"
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
-          disabled={isProcessing}
+          disabled={isProcessing || isSuccess}
           required
         />
       </div>
 
       <div className={styles.formGroup}>
-        <label>Email Address *</label>
+        <label>Email *</label>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          disabled={isProcessing}
+          disabled={isProcessing || isSuccess}
           required
         />
       </div>
@@ -316,65 +218,38 @@ export default function SubscribePage() {
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="08012345678"
-          disabled={isProcessing}
+          disabled={isProcessing || isSuccess}
           required
         />
         <small>We'll automatically convert to +234 format</small>
       </div>
 
-      <div className={styles.formGroup}>
-        <label>Address *</label>
-        <input
-          type="text"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          disabled={isProcessing}
-          required
-        />
-      </div>
-
-      <div className={styles.formGroup}>
-        <label>City *</label>
-        <input
-          type="text"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          disabled={isProcessing}
-          required
-        />
-      </div>
-
-      <div className={styles.formGroup}>
-        <label>State *</label>
-        <input
-          type="text"
-          value={state}
-          onChange={(e) => setState(e.target.value)}
-          disabled={isProcessing}
-          required
-        />
-      </div>
-
-      <div className={styles.formGroup}>
-        <label>Country</label>
-        <input
-          type="text"
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-          disabled
-        />
-      </div>
+      {error && (
+        <div className={styles.error}>
+          {error}
+          {error.includes('reference') && (
+            <button
+              onClick={() => navigator.clipboard.writeText(error.split(': ')[1])}
+              className={styles.copyButton}
+            >
+              Copy Reference
+            </button>
+          )}
+        </div>
+      )}
 
       <button
         onClick={handlePay}
-        disabled={isProcessing}
-        className={isProcessing ? styles.processing : ''}
+        disabled={isProcessing || isSuccess}
+        className={isProcessing ? styles.processing : isSuccess ? styles.success : ''}
       >
         {isProcessing ? (
           <>
             <span className={styles.spinner}></span>
             Processing Payment...
           </>
+        ) : isSuccess ? (
+          'Payment Successful!'
         ) : (
           `Pay ₦${amount} Now`
         )}
