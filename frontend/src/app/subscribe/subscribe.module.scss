@@ -1,5 +1,4 @@
-/* subscribe.module.scss */
-.container {
+.subscribe_container {
   max-width: 480px;
   margin: 2rem auto;
   padding: 2rem;
@@ -8,98 +7,98 @@
   box-shadow: 0 8px 32px rgba(31, 38, 135, 0.05);
   font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
   color: #333;
-  animation: fadeIn 0.6s ease-out;
-
-  h1 {
-    color: #4a3aff;
-    font-size: 1.8rem;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    position: relative;
-    padding-bottom: 1rem;
-
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 80px;
-      height: 3px;
-      background: linear-gradient(90deg, #4a3aff, #a78bfa);
-      border-radius: 3px;
-    }
-  }
+  animation: subscribe_fadeIn 0.6s ease-out;
 }
 
-.summary {
+.subscribe_container h1 {
+  color: #4a3aff;
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  position: relative;
+  padding-bottom: 1rem;
+}
+
+.subscribe_container h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, #4a3aff, #a78bfa);
+  border-radius: 3px;
+}
+
+.subscribe_summary {
   background: #f8f9ff;
   padding: 1.2rem;
   border-radius: 12px;
   margin-bottom: 1.8rem;
   border-left: 4px solid #4a3aff;
-
-  div {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    font-size: 1rem;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-
-    span {
-      color: #6b7280;
-      font-weight: 500;
-    }
-  }
 }
 
-.formGroup {
+.subscribe_summary div {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.subscribe_summary div:last-child {
+  margin-bottom: 0;
+}
+
+.subscribe_summary span {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.subscribe_formGroup {
   margin-bottom: 1.5rem;
-
-  label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-    color: #4b5563;
-    font-weight: 500;
-  }
-
-  input {
-    width: 100%;
-    padding: 0.8rem 1rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    background: #f9fafb;
-
-    &:focus {
-      outline: none;
-      border-color: #4a3aff;
-      box-shadow: 0 0 0 3px rgba(74, 58, 255, 0.1);
-    }
-
-    &:disabled {
-      background: #f3f4f6;
-      color: #9ca3af;
-      cursor: not-allowed;
-    }
-  }
-
-  small {
-    display: block;
-    margin-top: 0.3rem;
-    font-size: 0.75rem;
-    color: #6b7280;
-    font-style: italic;
-  }
 }
 
-button {
+.subscribe_formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.subscribe_formGroup input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: #f9fafb;
+}
+
+.subscribe_formGroup input:focus {
+  outline: none;
+  border-color: #4a3aff;
+  box-shadow: 0 0 0 3px rgba(74, 58, 255, 0.1);
+}
+
+.subscribe_formGroup input:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.subscribe_formGroup small {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.subscribe_button {
   width: 100%;
   padding: 1rem;
   border: none;
@@ -113,68 +112,68 @@ button {
   color: white;
   position: relative;
   overflow: hidden;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(74, 58, 255, 0.2);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    background: #e5e7eb;
-    color: #9ca3af;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.2),
-      transparent
-    );
-    transition: 0.5s;
-  }
-
-  &:hover::before {
-    left: 100%;
-  }
 }
 
-.processing {
+.subscribe_button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 58, 255, 0.2);
+}
+
+.subscribe_button:active {
+  transform: translateY(0);
+}
+
+.subscribe_button:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.subscribe_button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: 0.5s;
+}
+
+.subscribe_button:hover::before {
+  left: 100%;
+}
+
+.subscribe_processing {
   background: linear-gradient(135deg, #4a3aff, #6d5cff);
   color: white;
 }
 
-.success {
+.subscribe_success {
   background: linear-gradient(135deg, #10b981, #34d399);
   color: white;
 }
 
-.spinner {
+.subscribe_spinner {
   display: inline-block;
   width: 1rem;
   height: 1rem;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: white;
-  animation: spin 1s ease-in-out infinite;
+  animation: subscribe_spin 1s ease-in-out infinite;
   margin-right: 0.5rem;
   vertical-align: middle;
 }
 
-.error {
+.subscribe_error {
   background: #fee2e2;
   color: #b91c1c;
   padding: 1rem;
@@ -187,7 +186,7 @@ button {
   align-items: center;
 }
 
-.copyButton {
+.subscribe_copyButton {
   background: #ef4444;
   color: white;
   border: none;
@@ -196,13 +195,13 @@ button {
   font-size: 0.75rem;
   cursor: pointer;
   transition: background 0.2s;
-
-  &:hover {
-    background: #dc2626;
-  }
 }
 
-.pollingStatus {
+.subscribe_copyButton:hover {
+  background: #dc2626;
+}
+
+.subscribe_pollingStatus {
   background: #fef3c7;
   color: #92400e;
   padding: 1rem;
@@ -215,7 +214,7 @@ button {
   align-items: center;
 }
 
-.cancelButton {
+.subscribe_cancelButton {
   background: #f59e0b;
   color: white;
   border: none;
@@ -224,48 +223,48 @@ button {
   font-size: 0.75rem;
   cursor: pointer;
   transition: background 0.2s;
-
-  &:hover {
-    background: #d97706;
-  }
 }
 
-.note {
+.subscribe_cancelButton:hover {
+  background: #d97706;
+}
+
+.subscribe_note {
   margin-top: 2rem;
   font-size: 0.8rem;
   color: #6b7280;
   text-align: center;
   line-height: 1.5;
-
-  p {
-    margin: 0.5rem 0;
-  }
 }
 
-.skeletonHeader {
+.subscribe_note p {
+  margin: 0.5rem 0;
+}
+
+.subscribe_skeletonHeader {
   height: 2.5rem;
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: subscribe_shimmer 1.5s infinite;
   border-radius: 4px;
   margin-bottom: 2rem;
 }
 
-.skeletonLine {
+.subscribe_skeletonLine {
   height: 1rem;
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: subscribe_shimmer 1.5s infinite;
   border-radius: 4px;
   margin-bottom: 1rem;
   width: 100%;
-
-  &:nth-child(odd) {
-    width: 80%;
-  }
 }
 
-@keyframes fadeIn {
+.subscribe_skeletonLine:nth-child(odd) {
+  width: 80%;
+}
+
+@keyframes subscribe_fadeIn {
   from {
     opacity: 0;
     transform: translateY(10px);
@@ -276,13 +275,13 @@ button {
   }
 }
 
-@keyframes spin {
+@keyframes subscribe_spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes shimmer {
+@keyframes subscribe_shimmer {
   0% {
     background-position: 200% 0;
   }

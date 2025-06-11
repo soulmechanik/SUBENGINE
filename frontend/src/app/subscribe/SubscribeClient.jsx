@@ -254,25 +254,25 @@ export default function SubscribePage() {
 
   if (loading || !mounted) {
     return (
-      <div className={styles.container}>
-        <div className={styles.skeletonHeader}></div>
+      <div className={styles.subscribe_container}>
+        <div className={styles.subscribe_skeletonHeader}></div>
         {[...Array(7)].map((_, i) => (
-          <div key={i} className={styles.skeletonLine}></div>
+          <div key={i} className={styles.subscribe_skeletonLine}></div>
         ))}
       </div>
     )
   }
 
   return (
-    <div className={styles.container}>
+    <div className={styles.subscribe_container}>
       <h1>Subscribe to {groupName}</h1>
 
-      <div className={styles.summary}>
+      <div className={styles.subscribe_summary}>
         <div><span>Amount:</span> ₦{amount}</div>
         <div><span>Duration:</span> {duration} month(s)</div>
       </div>
 
-      <div className={styles.formGroup}>
+      <div className={styles.subscribe_formGroup}>
         <label>First Name *</label>
         <input
           type="text"
@@ -282,7 +282,7 @@ export default function SubscribePage() {
         />
       </div>
 
-      <div className={styles.formGroup}>
+      <div className={styles.subscribe_formGroup}>
         <label>Last Name *</label>
         <input
           type="text"
@@ -292,7 +292,7 @@ export default function SubscribePage() {
         />
       </div>
 
-      <div className={styles.formGroup}>
+      <div className={styles.subscribe_formGroup}>
         <label>Email *</label>
         <input
           type="email"
@@ -302,7 +302,7 @@ export default function SubscribePage() {
         />
       </div>
 
-      <div className={styles.formGroup}>
+      <div className={styles.subscribe_formGroup}>
         <label>Phone Number *</label>
         <input
           type="tel"
@@ -315,12 +315,12 @@ export default function SubscribePage() {
       </div>
 
       {error && (
-        <div className={styles.error}>
+        <div className={styles.subscribe_error}>
           {error}
           {error.includes('Reference') && (
             <button
               onClick={() => navigator.clipboard.writeText(error.split(': ')[1])}
-              className={styles.copyButton}
+              className={styles.subscribe_copyButton}
             >
               Copy Reference
             </button>
@@ -329,7 +329,7 @@ export default function SubscribePage() {
       )}
 
       {pollingStatus && (
-        <div className={styles.pollingStatus}>
+        <div className={styles.subscribe_pollingStatus}>
           {pollingStatus}
           <button
             onClick={() => {
@@ -337,7 +337,7 @@ export default function SubscribePage() {
               setPollingStatus('')
               setError('Payment check cancelled. You will receive email confirmation if payment succeeds.')
             }}
-            className={styles.cancelButton}
+            className={styles.subscribe_cancelButton}
           >
             Cancel Verification
           </button>
@@ -347,11 +347,14 @@ export default function SubscribePage() {
       <button
         onClick={handlePay}
         disabled={isProcessing || isSuccess}
-        className={isProcessing ? styles.processing : isSuccess ? styles.success : ''}
+        className={`${styles.subscribe_button} ${
+          isProcessing ? styles.subscribe_processing : 
+          isSuccess ? styles.subscribe_success : ''
+        }`}
       >
         {isProcessing ? (
           <>
-            <span className={styles.spinner}></span>
+            <span className={styles.subscribe_spinner}></span>
             Processing Payment...
           </>
         ) : isSuccess ? (
@@ -361,7 +364,7 @@ export default function SubscribePage() {
         )}
       </button>
 
-      <div className={styles.note}>
+      <div className={styles.subscribe_note}>
         <p>By proceeding, you agree to our Terms of Service.</p>
         <p>You'll be redirected to Bani's secure payment page.</p>
       </div>
