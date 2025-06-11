@@ -65,7 +65,13 @@ exports.getPaymentStatus = async (req, res) => {
   }
 
   try {
-    const payment = await Payment.findOne({ reference });
+    // Look for match in either internal reference or baniReference
+    const payment = await Payment.findOne({
+      $or: [
+        { reference: reference },
+        { baniReference: reference }
+      ]
+    });
 
     if (!payment) {
       console.warn(`⚠️ Payment not found for reference: ${reference}`);
@@ -83,4 +89,5 @@ exports.getPaymentStatus = async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 

@@ -15,6 +15,7 @@ export default function SubscribePage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState(null)
+  const [pollingStatus, setPollingStatus] = useState('')
 
   const groupId = searchParams.get('groupId')
   const groupName = searchParams.get('groupName') || ''
@@ -32,6 +33,18 @@ export default function SubscribePage() {
   useEffect(() => {
     setMounted(true)
     const timer = setTimeout(() => setLoading(false), 1000)
+    
+    // Check for pending payments on mount
+    const pendingRef = localStorage.getItem('lastPaymentReference')
+    if (pendingRef && !isSuccess && !isProcessing) {
+      if (confirm('You have a pending payment. Would you like to check its status?')) {
+        setIsProcessing(true)
+        pollPaymentStatus(pendingRef)
+      } else {
+        localStorage.removeItem('lastPaymentReference')
+      }
+    }
+    
     return () => clearTimeout(timer)
   }, [])
 
@@ -44,13 +57,27 @@ export default function SubscribePage() {
 
   const handleOnSuccess = async (response) => {
     setIsSuccess(true)
+    setIsProcessing(false)
+    localStorage.removeItem('lastPaymentReference')
+    
     try {
+      // Update backend record
+      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: response.reference,
+          status: 'successful',
+          internalReference: internalReference
+        }),
+      })
+
+      // Then redirect
       const redirectUrl = `/subscribe/success?reference=${response.reference}&groupId=${groupId}&amount=${amount}&telegramId=${telegramId}`
       router.push(redirectUrl)
     } catch (err) {
-      console.error('Redirect error:', err)
-      setError(`Payment succeeded but redirection failed. Reference: ${response.reference}`)
-      setIsProcessing(false)
+      console.error('Success handler error:', err)
+      setError(`Payment succeeded but record update failed. Reference: ${response.reference}`)
     }
   }
 
@@ -85,23 +112,47 @@ export default function SubscribePage() {
 
     const poll = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/status?reference=${baniRef}`)
-        const data = await res.json()
-        console.log('🧾 Payment status response:', data)
+        setPollingStatus(`Checking payment status (${attempts + 1}/${maxAttempts})...`)
+        
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/verify`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY}`
+          },
+          body: JSON.stringify({ reference: baniRef })
+        })
 
-        if (['paid', 'successful', 'completed'].includes(data.status)) {
-          handleOnSuccess({ reference: baniRef })
+        // Check response content type
+        const contentType = res.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await res.text()
+          throw new Error(`Server returned unexpected format: ${text.substring(0, 100)}...`)
+        }
+
+        const data = await res.json()
+        console.log('Payment status response:', data)
+
+        if (data.success && ['paid', 'successful', 'completed'].includes(data.status)) {
+          handleOnSuccess({ reference: baniRef, ...data })
         } else if (attempts < maxAttempts) {
           attempts++
           setTimeout(poll, delay)
         } else {
           setIsProcessing(false)
-          setError('Failed to verify payment status. Please contact support.')
+          setError(data.message || 'Payment verification timed out. Please check your email for confirmation.')
+          localStorage.removeItem('lastPaymentReference')
         }
       } catch (err) {
         console.error('Polling error:', err)
-        setIsProcessing(false)
-        setError('Failed to verify payment status. Please try again later.')
+        if (attempts < maxAttempts) {
+          attempts++
+          setTimeout(poll, delay)
+        } else {
+          setIsProcessing(false)
+          setError('Failed to verify payment status. Please contact support with your reference number.')
+          localStorage.removeItem('lastPaymentReference')
+        }
       }
     }
 
@@ -122,6 +173,7 @@ export default function SubscribePage() {
 
     setIsProcessing(true)
     setError(null)
+    setPollingStatus('')
 
     try {
       const recordRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
@@ -142,7 +194,8 @@ export default function SubscribePage() {
       })
 
       if (!recordRes.ok) {
-        throw new Error(await recordRes.text() || 'Failed to initialize payment')
+        const errorText = await recordRes.text()
+        throw new Error(errorText || 'Failed to initialize payment')
       }
 
       const { payment } = await recordRes.json()
@@ -164,17 +217,20 @@ export default function SubscribePage() {
         onClose: handleOnClose,
         callback: (response) => {
           console.log('Bani callback response:', response)
-
           const baniRef = response.reference
 
-          if (['successful', 'completed', 'paid'].includes(response.status)) {
+          if (response.success === true || ['successful', 'completed', 'paid'].includes(response.status)) {
             handleOnSuccess({ reference: baniRef })
-          } else if (['pending', 'payment_processing', 'processing'].includes(response.status)) {
-            setError('⏳ Payment is processing. Verifying final status...')
+          } 
+          else if (['pending', 'payment_processing', 'processing'].includes(response.status)) {
+            setError('⏳ Payment is processing. Please wait...')
+            localStorage.setItem('lastPaymentReference', baniRef)
             pollPaymentStatus(baniRef)
-          } else {
+          }
+          else {
             setIsProcessing(false)
-            setError(response.message || 'Payment failed or was cancelled')
+            setError(response.message || `Payment failed. Status: ${response.status}`)
+            localStorage.removeItem('lastPaymentReference')
           }
         }
       })
@@ -183,6 +239,19 @@ export default function SubscribePage() {
       console.error('Payment initiation error:', err)
       setError(err.message || 'Failed to start payment process. Please try again.')
       setIsProcessing(false)
+      localStorage.removeItem('lastPaymentReference')
+      
+      // Log error to backend for debugging
+      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/errors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: err.message,
+          reference: internalReference,
+          page: 'subscribe',
+          timestamp: new Date().toISOString()
+        }),
+      })
     }
   }
 
@@ -263,6 +332,22 @@ export default function SubscribePage() {
               Copy Reference
             </button>
           )}
+        </div>
+      )}
+
+      {pollingStatus && (
+        <div className={styles.pollingStatus}>
+          {pollingStatus}
+          <button
+            onClick={() => {
+              setIsProcessing(false)
+              setPollingStatus('')
+              setError('Payment check cancelled. You will receive email confirmation if payment succeeds.')
+            }}
+            className={styles.cancelButton}
+          >
+            Cancel Verification
+          </button>
         </div>
       )}
 
