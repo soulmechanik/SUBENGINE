@@ -16,20 +16,17 @@ export default function SubscribePage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState(null)
 
-  // Get parameters from URL
   const groupId = searchParams.get('groupId')
   const groupName = searchParams.get('groupName') || ''
   const amount = searchParams.get('amount')
   const duration = searchParams.get('duration')
   const telegramId = searchParams.get('userId') || ''
 
-  // Form state
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
 
-  // Generate unique reference
   const reference = `BNI-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
   useEffect(() => {
@@ -47,13 +44,12 @@ export default function SubscribePage() {
 
   const handleOnSuccess = async (response) => {
     try {
-      // Verify payment with backend
       const verificationRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reference: response.reference,
-          status: 'successful',
+          status: response.status,
           transactionRef: response.transactionRef
         }),
       })
@@ -65,13 +61,12 @@ export default function SubscribePage() {
       setIsSuccess(true)
       router.push({
         pathname: '/subscribe/success',
-        query: { 
-          groupId, 
+        query: {
+          groupId,
           amount,
           reference: response.reference
         },
       })
-
     } catch (err) {
       console.error('Payment confirmation error:', err)
       setError('Payment successful but confirmation failed. Your reference: ' + response.reference)
@@ -106,7 +101,6 @@ export default function SubscribePage() {
   const handlePay = async () => {
     if (isSuccess) return
 
-    // Validate inputs
     const formattedPhone = validateInputs()
     if (!formattedPhone) return
 
@@ -120,7 +114,6 @@ export default function SubscribePage() {
     setError(null)
 
     try {
-      // Record payment in backend first
       const recordRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -144,7 +137,6 @@ export default function SubscribePage() {
 
       const { payment } = await recordRes.json()
 
-      // Initialize Bani payment
       BaniPopUp({
         amount: amount.toString(),
         email,
@@ -152,8 +144,8 @@ export default function SubscribePage() {
         firstName,
         lastName,
         merchantKey,
-        merchantRef: reference, // Use our generated reference
-        metadata: {  // Additional data for webhook
+        merchantRef: reference,
+        metadata: {
           telegramId,
           groupId,
           duration,
@@ -161,13 +153,18 @@ export default function SubscribePage() {
         },
         onClose: handleOnClose,
         callback: (response) => {
-  if (response.status === 'successful' || response.status === 'pending') {
-    handleOnSuccess(response)
-  } else {
-    setIsProcessing(false)
-    setError('Payment failed or was cancelled')
-  }
-}
+          console.log('Bani callback:', response)
+
+          if (['successful', 'pending'].includes(response.status)) {
+            handleOnSuccess(response)
+          } else {
+            // For truly failed or cancelled cases
+            if (!isSuccess) {
+              setIsProcessing(false)
+              setError('Payment failed or was cancelled')
+            }
+          }
+        }
       })
 
     } catch (err) {
@@ -247,7 +244,7 @@ export default function SubscribePage() {
         <div className={styles.error}>
           {error}
           {error.includes('reference') && (
-            <button 
+            <button
               onClick={() => navigator.clipboard.writeText(error.split(': ')[1])}
               className={styles.copyButton}
             >
