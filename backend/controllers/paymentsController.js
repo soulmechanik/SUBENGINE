@@ -3,15 +3,17 @@ const Group = require('../models/Group');
 
 exports.recordPayment = async (req, res) => {
   try {
-    const {
-      reference,
-      telegramId,
-      groupId,
-      amount,
-      duration,
-      email,
-      status, // Accept from frontend (e.g., 'successful')
-    } = req.body;
+   const {
+  reference,
+  telegramId,
+  groupId,
+  amount,
+  duration,
+  email,
+  status,
+  transactionRef, // <-- Add this
+} = req.body;
+;
 
     // Validate required fields
     const requiredFields = { reference, telegramId, groupId, amount, duration, email };
@@ -36,18 +38,20 @@ exports.recordPayment = async (req, res) => {
     const commission = amount * commissionRate;
     const netAmount = amount - commission;
 
-    const payment = await Payment.create({
-      reference,
-      telegramId,
-      group: group._id, // Store Mongo ObjectId
-      amount,
-      duration,
-      email,
-      commission,
-      netAmount,
-      status: status || 'pending',
-      paidAt: status === 'successful' ? new Date() : null,
-    });
+   const payment = await Payment.create({
+  reference,
+  telegramId,
+  group: group._id,
+  amount,
+  duration,
+  email,
+  transactionRef, // <-- Add this
+  commission,
+  netAmount,
+  status: status || 'pending',
+  paidAt: status === 'successful' ? new Date() : null,
+});
+
 
     res.status(201).json({ message: 'Payment recorded', payment });
   } catch (err) {

@@ -15,16 +15,14 @@ export default function SubscribePage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState(null)
-  const [clientReference, setClientReference] = useState('')
+  const [paymentId, setPaymentId] = useState(null)
 
-  // Extract query parameters
   const groupId = searchParams.get('groupId')
   const groupName = searchParams.get('groupName') || ''
   const amount = searchParams.get('amount')
   const duration = searchParams.get('duration')
   const telegramId = searchParams.get('userId') || ''
 
-  // Form state
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [firstName, setFirstName] = useState('')
@@ -36,70 +34,41 @@ export default function SubscribePage() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Generate a client-side reference ID
-  const generateReference = () => {
-    return `BNPay-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-  }
-
   const handleOnClose = (response) => {
-    console.log('Payment Closed:', response)
+    console.log('Payment closed:', response)
     if (!isSuccess) {
       setIsProcessing(false)
     }
   }
 
   const handleOnSuccess = async (response) => {
-    console.log('Payment Success:', response)
     setIsProcessing(true)
     setError(null)
 
     try {
-      // Update the payment record with the actual Bani reference
-      const updateRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/update-reference`, {
+      const updateRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/update`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tempReference: clientReference,
-          baniReference: response.reference,
-          status: 'processing'
+          paymentId,
+          reference: response.reference,
+          status: 'successful'
         }),
       })
 
       if (!updateRes.ok) {
-        throw new Error('Failed to update payment reference')
+        throw new Error('Failed to confirm payment')
       }
 
-      // Poll for payment confirmation
-      const maxAttempts = 10
-      let attempts = 0
-      let status = 'pending'
+      setIsSuccess(true)
+      router.push({
+        pathname: '/subscribe/success',
+        query: { groupId, amount },
+      })
 
-      while (attempts < maxAttempts) {
-        const statusRes = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/status?ref=${response.reference}`
-        )
-        const statusData = await statusRes.json()
-        status = statusData.status
-        
-        if (status === 'successful') break
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        attempts++
-      }
-
-      if (status === 'successful') {
-        setIsSuccess(true)
-        setIsProcessing(false)
-        router.push({
-          pathname: '/subscribe/success',
-          query: { groupId, amount },
-        })
-      } else {
-        setError('Payment processing is taking longer than expected. Please check back later.')
-        setIsProcessing(false)
-      }
     } catch (err) {
       console.error('Payment confirmation error:', err)
-      setError('Payment was successful but confirmation failed. Please contact support with your reference.')
+      setError('Payment successful but confirmation failed. Your reference: ' + response.reference)
       setIsProcessing(false)
     }
   }
@@ -107,20 +76,20 @@ export default function SubscribePage() {
   const handlePay = async () => {
     if (isSuccess) return
 
-    // Validate all required fields
+    // Validate inputs
     if (!amount || !email || !phone || !firstName || !lastName || !groupId || !telegramId || !duration) {
       alert('Please fill all required fields')
       return
     }
 
-    // Validate phone number
+    // Format phone number
     let formattedPhone = phone.trim()
     if (formattedPhone.startsWith('0')) {
       formattedPhone = '+234' + formattedPhone.slice(1)
     }
 
     if (!/^\+234\d{10}$/.test(formattedPhone)) {
-      alert('Please enter a valid Nigerian phone number starting with 0')
+      alert('Please enter a valid Nigerian phone number')
       return
     }
 
@@ -131,16 +100,13 @@ export default function SubscribePage() {
     }
 
     setIsProcessing(true)
-    const reference = generateReference()
-    setClientReference(reference)
 
     try {
-      // Create initial pending payment record
+      // Create initial payment record
       const recordRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reference,
           telegramId,
           groupId,
           amount: Number(amount),
@@ -149,7 +115,7 @@ export default function SubscribePage() {
           phone: formattedPhone,
           firstName,
           lastName,
-          status: 'pending'
+          status: 'initiated'
         }),
       })
 
@@ -157,7 +123,10 @@ export default function SubscribePage() {
         throw new Error('Failed to initialize payment')
       }
 
-      // Launch Bani payment popup
+      const { _id } = await recordRes.json()
+      setPaymentId(_id)
+
+      // Launch Bani payment
       BaniPopUp({
         amount: amount.toString(),
         email,
@@ -169,7 +138,7 @@ export default function SubscribePage() {
           groupId, 
           duration, 
           telegramId,
-          clientReference: reference // Include our reference in metadata
+          paymentId: _id // Include DB ID in metadata
         },
         onClose: handleOnClose,
         callback: handleOnSuccess,
@@ -186,86 +155,63 @@ export default function SubscribePage() {
     return (
       <div className={styles.container}>
         <div className={styles.skeletonHeader}></div>
-        <div className={styles.skeletonInfo}></div>
-        <div className={styles.skeletonInfo}></div>
-        <div className={styles.skeletonInfo}></div>
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className={styles.skeletonFormGroup}>
-            <div className={styles.skeletonLabel}></div>
-            <div className={styles.skeletonInput}></div>
-          </div>
+        {[...Array(7)].map((_, i) => (
+          <div key={i} className={styles.skeletonLine}></div>
         ))}
-        <div className={styles.skeletonButton}></div>
       </div>
     )
   }
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>Subscribe to {groupName}</h1>
+      <h1>Subscribe to {groupName}</h1>
       
       <div className={styles.summary}>
-        <div className={styles.summaryItem}>
-          <span>Amount:</span>
-          <span>₦{amount}</span>
-        </div>
-        <div className={styles.summaryItem}>
-          <span>Duration:</span>
-          <span>{duration}</span>
-        </div>
+        <div><span>Amount:</span> ₦{amount}</div>
+        <div><span>Duration:</span> {duration}</div>
       </div>
 
       <div className={styles.formGroup}>
-        <label htmlFor="firstName">First Name</label>
+        <label>First Name</label>
         <input
-          id="firstName"
-          type="text"
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
-          placeholder="John"
-          required
           disabled={isSuccess}
+          required
         />
       </div>
 
       <div className={styles.formGroup}>
-        <label htmlFor="lastName">Last Name</label>
+        <label>Last Name</label>
         <input
-          id="lastName"
-          type="text"
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
-          placeholder="Doe"
-          required
           disabled={isSuccess}
+          required
         />
       </div>
 
       <div className={styles.formGroup}>
-        <label htmlFor="email">Email Address</label>
+        <label>Email</label>
         <input
-          id="email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          required
           disabled={isSuccess}
+          required
         />
       </div>
 
       <div className={styles.formGroup}>
-        <label htmlFor="phone">Phone Number</label>
+        <label>Phone Number</label>
         <input
-          id="phone"
           type="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="08000111111"
-          required
           disabled={isSuccess}
+          required
         />
-        <p className={styles.hint}>We'll convert it to +234 format</p>
+        <p>We'll convert it to +234 format</p>
       </div>
 
       {error && <div className={styles.error}>{error}</div>}
@@ -273,11 +219,9 @@ export default function SubscribePage() {
       <button
         onClick={handlePay}
         disabled={isProcessing || isSuccess}
-        className={isSuccess ? styles.success : isProcessing ? styles.processing : ''}
+        className={isProcessing ? styles.processing : isSuccess ? styles.success : ''}
       >
-        {isSuccess ? 'Payment Successful!' : 
-         isProcessing ? <><span className={styles.spinner} /> Processing...</> : 
-         'Pay Now'}
+        {isProcessing ? 'Processing...' : isSuccess ? 'Success!' : 'Pay Now'}
       </button>
     </div>
   )

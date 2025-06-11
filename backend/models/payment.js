@@ -7,8 +7,9 @@ const paymentSchema = new mongoose.Schema({
   amount: Number,
   duration: String,
   email: { type: String, required: true },  // new field
-  status: { type: String, enum: ['pending', 'successful'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'successful', 'failed'], default: 'pending' },
   paidAt: Date,
+  transactionRef: { type: String },
   
   subscriptionStatus: {
   type: String,
