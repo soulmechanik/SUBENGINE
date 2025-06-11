@@ -6,8 +6,8 @@ const paymentSchema = new mongoose.Schema({
   group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group' },
   amount: Number,
   duration: String,
-  email: { type: String, required: true },  // new field
-  status: { type: String, enum: ['pending', 'successful', 'failed'], default: 'pending' },
+  email: { type: String },  // new field
+  status: { type: String, enum: ['pending', 'initiated', 'successful', 'failed'], default: 'pending' },
   paidAt: Date,
   transactionRef: { type: String },
   

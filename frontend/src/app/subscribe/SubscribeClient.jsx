@@ -15,7 +15,6 @@ export default function SubscribePage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState(null)
-  const [paymentId, setPaymentId] = useState(null)
 
   const groupId = searchParams.get('groupId')
   const groupName = searchParams.get('groupName') || ''
@@ -27,7 +26,8 @@ export default function SubscribePage() {
   const [phone, setPhone] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-const reference = `BNPay-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+
+  const reference = `BNPay-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
   useEffect(() => {
     setMounted(true)
@@ -42,7 +42,7 @@ const reference = `BNPay-${Date.now()}-${Math.floor(Math.random() * 1000)}`
     }
   }
 
-  const handleOnSuccess = async (response) => {
+  const handleOnSuccess = async (response, paymentId) => {
     setIsProcessing(true)
     setError(null)
 
@@ -77,13 +77,11 @@ const reference = `BNPay-${Date.now()}-${Math.floor(Math.random() * 1000)}`
   const handlePay = async () => {
     if (isSuccess) return
 
-    // Validate inputs
     if (!amount || !email || !phone || !firstName || !lastName || !groupId || !telegramId || !duration) {
       alert('Please fill all required fields')
       return
     }
 
-    // Format phone number
     let formattedPhone = phone.trim()
     if (formattedPhone.startsWith('0')) {
       formattedPhone = '+234' + formattedPhone.slice(1)
@@ -103,7 +101,6 @@ const reference = `BNPay-${Date.now()}-${Math.floor(Math.random() * 1000)}`
     setIsProcessing(true)
 
     try {
-      // Create initial payment record
       const recordRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -115,9 +112,9 @@ const reference = `BNPay-${Date.now()}-${Math.floor(Math.random() * 1000)}`
           email,
           phone: formattedPhone,
           firstName,
-            reference,
           lastName,
-          status: 'initiated'
+          reference,
+          status: 'pending'
         }),
       })
 
@@ -126,9 +123,7 @@ const reference = `BNPay-${Date.now()}-${Math.floor(Math.random() * 1000)}`
       }
 
       const { _id } = await recordRes.json()
-      setPaymentId(_id)
 
-      // Launch Bani payment
       BaniPopUp({
         amount: amount.toString(),
         email,
@@ -136,15 +131,15 @@ const reference = `BNPay-${Date.now()}-${Math.floor(Math.random() * 1000)}`
         firstName,
         lastName,
         merchantKey,
-        metadata: { 
-          groupId, 
-          duration, 
+        metadata: {
+          groupId,
+          duration,
           telegramId,
-            reference,
-          paymentId: _id // Include DB ID in metadata
+          reference,
+          paymentId: _id
         },
         onClose: handleOnClose,
-        callback: handleOnSuccess,
+        callback: (response) => handleOnSuccess(response, _id)
       })
 
     } catch (err) {
@@ -168,7 +163,7 @@ const reference = `BNPay-${Date.now()}-${Math.floor(Math.random() * 1000)}`
   return (
     <div className={styles.container}>
       <h1>Subscribe to {groupName}</h1>
-      
+
       <div className={styles.summary}>
         <div><span>Amount:</span> ₦{amount}</div>
         <div><span>Duration:</span> {duration}</div>

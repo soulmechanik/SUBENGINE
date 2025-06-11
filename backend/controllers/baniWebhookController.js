@@ -91,7 +91,8 @@ async function handlePaidPayment(payment, data, baniReference, res) {
       groupId: data.custom_data?.groupId,
       amount: data.pay_amount,
       duration: data.custom_data?.duration,
-      email: data.holder_email,
+   email: data.holder_email || data.customer_email || data.custom_data?.email,
+
       phone: data.holder_phone,
       firstName: data.holder_first_name,
       lastName: data.holder_last_name,
