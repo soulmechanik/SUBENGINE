@@ -78,35 +78,43 @@ export default function SubscribePage() {
     return formattedPhone
   }
 
-  const pollPaymentStatus = async (ref) => {
-    let attempts = 0
-    const maxAttempts = 10
-    const delay = 3000
+ const pollPaymentStatus = async (ref) => {
+  let attempts = 0
+  const maxAttempts = 10
+  const delay = 3000
 
-    const poll = async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/status?reference=${ref}`)
-        const data = await res.json()
-        console.log('🧾 Payment status response:', data)
+  const poll = async () => {
+    try {
+      const url = `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/status?reference=${ref}`
+      console.log('Polling URL:', url)
 
-        if (['paid', 'successful', 'completed'].includes(data.status)) {
-          handleOnSuccess({ reference: ref })
-        } else if (attempts < maxAttempts) {
-          attempts++
-          setTimeout(poll, delay)
-        } else {
-          setIsProcessing(false)
-          setError('Failed to verify payment status. Please contact support.')
-        }
-      } catch (err) {
-        console.error('Polling error:', err)
+      const res = await fetch(url)
+      const text = await res.text()
+
+      console.log('Raw response:', text)
+
+      const data = JSON.parse(text)
+      console.log('🧾 Payment status response:', data)
+
+      if (['paid', 'successful', 'completed'].includes(data.status)) {
+        handleOnSuccess({ reference: ref })
+      } else if (attempts < maxAttempts) {
+        attempts++
+        setTimeout(poll, delay)
+      } else {
         setIsProcessing(false)
-        setError('Failed to verify payment status. Please try again later.')
+        setError('Failed to verify payment status. Please contact support.')
       }
+    } catch (err) {
+      console.error('Polling error:', err)
+      setIsProcessing(false)
+      setError('Failed to verify payment status. Please try again later.')
     }
-
-    poll()
   }
+
+  poll()
+}
+
 
   const handlePay = async () => {
     if (isSuccess) return
