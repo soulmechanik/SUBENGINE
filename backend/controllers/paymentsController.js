@@ -57,7 +57,6 @@ exports.recordPayment = async (req, res) => {
   }
 };
 
-
 exports.getPaymentStatus = async (req, res) => {
   const reference = req.query.reference;
 
@@ -69,12 +68,19 @@ exports.getPaymentStatus = async (req, res) => {
     const payment = await Payment.findOne({ reference });
 
     if (!payment) {
+      console.warn(`⚠️ Payment not found for reference: ${reference}`);
       return res.status(404).json({ error: 'Payment not found' });
     }
 
-    return res.status(200).json({ status: payment.status });
+    console.log(`ℹ️ Payment status check for ${reference}: ${payment.status}`);
+
+    return res.status(200).json({
+      reference,
+      status: payment.status
+    });
   } catch (err) {
-    console.error('Error fetching payment status:', err);
+    console.error('❌ Error fetching payment status:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
+

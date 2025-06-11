@@ -21,6 +21,7 @@ export default function SubscribePage() {
   const amount = searchParams.get('amount')
   const duration = searchParams.get('duration')
   const telegramId = searchParams.get('userId') || ''
+
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [firstName, setFirstName] = useState('')
@@ -30,65 +31,25 @@ export default function SubscribePage() {
 
   useEffect(() => {
     setMounted(true)
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 1000)
+    const timer = setTimeout(() => setLoading(false), 1000)
     return () => clearTimeout(timer)
   }, [])
 
-  const handleOnClose = () => {
-    if (!isSuccess) setIsProcessing(false)
-  }
-
-  const redirectToSuccess = (ref) => {
-    const redirectUrl = `/subscribe/success?reference=${ref}&groupId=${groupId}&amount=${amount}&telegramId=${telegramId}`
-    router.push(redirectUrl)
-  }
-
-  const pollPaymentStatus = async (ref) => {
-    const pollInterval = 5000
-    const maxAttempts = 12 // ~60s
-
-    let attempts = 0
-
-    const intervalId = setInterval(async () => {
-      attempts++
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/status?reference=${ref}`)
-        const data = await res.json()
-
-        if (['successful', 'completed', 'paid'].includes(data.status)) {
-          clearInterval(intervalId)
-          setIsSuccess(true)
-          redirectToSuccess(ref)
-        } else if (['failed', 'cancelled'].includes(data.status)) {
-          clearInterval(intervalId)
-          setError('Payment failed or was cancelled.')
-          setIsProcessing(false)
-        } else if (attempts >= maxAttempts) {
-          clearInterval(intervalId)
-          setError('Payment is still processing. Please check your email for confirmation or contact support.')
-          setIsProcessing(false)
-        }
-      } catch (err) {
-        clearInterval(intervalId)
-        setError('Failed to verify payment status.')
-        setIsProcessing(false)
-      }
-    }, pollInterval)
+  const handleOnClose = (response) => {
+    console.log('Payment modal closed with response:', response)
+    if (!isSuccess) {
+      setIsProcessing(false)
+    }
   }
 
   const handleOnSuccess = async (response) => {
-    setIsProcessing(true)
-
-    if (['successful', 'completed', 'paid'].includes(response.status)) {
-      setIsSuccess(true)
-      redirectToSuccess(response.reference)
-    } else if (['pending', 'processing', 'payment_processing'].includes(response.status)) {
-      setError('Payment is processing. Please wait for confirmation...')
-      pollPaymentStatus(response.reference)
-    } else {
-      setError('Unexpected payment status. Please contact support.')
+    setIsSuccess(true)
+    try {
+      const redirectUrl = `/subscribe/success?reference=${response.reference}&groupId=${groupId}&amount=${amount}&telegramId=${telegramId}`
+      router.push(redirectUrl)
+    } catch (err) {
+      console.error('Redirect error:', err)
+      setError(`Payment succeeded but redirection failed. Reference: ${response.reference}`)
       setIsProcessing(false)
     }
   }
@@ -115,6 +76,36 @@ export default function SubscribePage() {
     }
 
     return formattedPhone
+  }
+
+  const pollPaymentStatus = async (ref) => {
+    let attempts = 0
+    const maxAttempts = 10
+    const delay = 3000
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/status?reference=${ref}`)
+        const data = await res.json()
+        console.log('🧾 Payment status response:', data)
+
+        if (['paid', 'successful', 'completed'].includes(data.status)) {
+          handleOnSuccess({ reference: ref })
+        } else if (attempts < maxAttempts) {
+          attempts++
+          setTimeout(poll, delay)
+        } else {
+          setIsProcessing(false)
+          setError('Failed to verify payment status. Please contact support.')
+        }
+      } catch (err) {
+        console.error('Polling error:', err)
+        setIsProcessing(false)
+        setError('Failed to verify payment status. Please try again later.')
+      }
+    }
+
+    poll()
   }
 
   const handlePay = async () => {
@@ -154,6 +145,8 @@ export default function SubscribePage() {
         throw new Error(await recordRes.text() || 'Failed to initialize payment')
       }
 
+      const { payment } = await recordRes.json()
+
       BaniPopUp({
         amount: amount.toString(),
         email,
@@ -170,7 +163,17 @@ export default function SubscribePage() {
         },
         onClose: handleOnClose,
         callback: (response) => {
-          handleOnSuccess(response)
+          console.log('Bani callback response:', response)
+
+          if (['successful', 'completed', 'paid'].includes(response.status)) {
+            handleOnSuccess(response)
+          } else if (['pending', 'payment_processing', 'processing'].includes(response.status)) {
+            setError('⏳ Payment is processing. Verifying final status...')
+            pollPaymentStatus(reference)
+          } else {
+            setIsProcessing(false)
+            setError(response.message || 'Payment failed or was cancelled')
+          }
         }
       })
 
@@ -203,22 +206,47 @@ export default function SubscribePage() {
 
       <div className={styles.formGroup}>
         <label>First Name *</label>
-        <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={isProcessing || isSuccess} required />
+        <input
+          type="text"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          disabled={isProcessing || isSuccess}
+          required
+        />
       </div>
 
       <div className={styles.formGroup}>
         <label>Last Name *</label>
-        <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={isProcessing || isSuccess} required />
+        <input
+          type="text"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          disabled={isProcessing || isSuccess}
+          required
+        />
       </div>
 
       <div className={styles.formGroup}>
         <label>Email *</label>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isProcessing || isSuccess} required />
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={isProcessing || isSuccess}
+          required
+        />
       </div>
 
       <div className={styles.formGroup}>
         <label>Phone Number *</label>
-        <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08012345678" disabled={isProcessing || isSuccess} required />
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="08012345678"
+          disabled={isProcessing || isSuccess}
+          required
+        />
         <small>We'll automatically convert to +234 format</small>
       </div>
 
@@ -226,7 +254,10 @@ export default function SubscribePage() {
         <div className={styles.error}>
           {error}
           {error.includes('Reference') && (
-            <button onClick={() => navigator.clipboard.writeText(error.split(': ')[1])} className={styles.copyButton}>
+            <button
+              onClick={() => navigator.clipboard.writeText(error.split(': ')[1])}
+              className={styles.copyButton}
+            >
               Copy Reference
             </button>
           )}
