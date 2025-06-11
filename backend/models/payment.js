@@ -3,7 +3,12 @@ const mongoose = require('mongoose');
 const paymentSchema = new mongoose.Schema({
   reference: { type: String, required: true, unique: true },
   telegramId: { type: String, required: true },
-  group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true },
+group: {
+  type: String,
+  ref: 'Group', // ✅ Still works
+  required: true
+},
+
 
   amount: { type: Number, required: true },
   duration: { type: String, required: true },

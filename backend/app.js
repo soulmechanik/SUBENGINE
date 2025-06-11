@@ -1,56 +1,72 @@
+// backend/app.js
+
 const express = require('express');
 const cors = require('cors');
 const webhookRoutes = require('./routes/webhook');
 const paymentRoutes = require('./routes/paymentRoutes');
 const paystackRoutes = require('./routes/paystackRoutes');
+require('dotenv').config();
 
 const app = express();
 
-// CORS configuration
+// Allowed origins for CORS
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
+// CORS options
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL, 'https://your-production-domain.com'] 
-    : ['http://localhost:3000', 'http://localhost:5173'],
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.error('❌ Blocked CORS origin:', origin);
+      callback(new Error('CORS not allowed from this origin: ' + origin));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-bani-signature'],
-  credentials: true
+  credentials: true,
 };
 
-// Apply CORS to all routes except webhook
 app.use(cors(corsOptions));
 
-// Express JSON middleware for normal routes
+// Apply JSON body parser (must come **after** raw parser for webhooks)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Special middleware for Bani webhook - must come before JSON middleware
-app.use('/api/webhook/bani', 
-  express.raw({ type: 'application/json' }), 
+// ✅ Bani Webhook Route: Use raw body for signature verification (optional)
+app.post(
+  '/api/webhook/bani',
+  express.raw({ type: 'application/json' }),
   (req, res, next) => {
     try {
-      if (req.body) {
+      if (Buffer.isBuffer(req.body)) {
         req.rawBody = req.body.toString('utf8');
         req.body = JSON.parse(req.rawBody);
       }
       next();
     } catch (error) {
-      console.error('Webhook body parsing error:', error);
+      console.error('❌ Webhook body parsing error:', error);
       return res.status(400).json({ error: 'Invalid JSON payload' });
     }
-  }
+  },
+  require('./controllers/baniWebhookController').handleBaniWebhook
 );
 
-// Routes
+// Standard routes
 app.use('/api/payments', paymentRoutes);
 app.use('/api', paystackRoutes);
-app.use('/api/webhook', webhookRoutes);
+app.use('/api/webhook', webhookRoutes); // this can contain other webhook types
 
-// Health check endpoint
-app.get('/', (req, res) => res.send('SubEngine API is live'));
+// Health check
+app.get('/', (req, res) => res.send('SubEngine API is live ✅'));
 
-// Error handling middleware
+// Global error handler
 app.use((err, req, res, next) => {
-  console.error('Global error handler:', err);
+  console.error('❌ Global error:', err.message);
   res.status(500).json({ error: 'Internal server error' });
 });
 

@@ -44,32 +44,18 @@ export default function SubscribePage() {
 
   const handleOnSuccess = async (response) => {
     try {
-      const verificationRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reference: response.reference,
-          status: response.status,
-          transactionRef: response.transactionRef
-        }),
-      })
-
-      if (!verificationRes.ok) {
-        throw new Error('Payment verification failed')
-      }
-
-      setIsSuccess(true)
       router.push({
         pathname: '/subscribe/success',
         query: {
+          reference: response.reference,
           groupId,
           amount,
-          reference: response.reference
+          telegramId,
         },
       })
     } catch (err) {
-      console.error('Payment confirmation error:', err)
-      setError('Payment successful but confirmation failed. Your reference: ' + response.reference)
+      console.error('Redirect error:', err)
+      setError('Payment succeeded, but redirection failed. Reference: ' + response.reference)
       setIsProcessing(false)
     }
   }
@@ -154,11 +140,9 @@ export default function SubscribePage() {
         onClose: handleOnClose,
         callback: (response) => {
           console.log('Bani callback:', response)
-
           if (['successful', 'pending'].includes(response.status)) {
             handleOnSuccess(response)
           } else {
-            // For truly failed or cancelled cases
             if (!isSuccess) {
               setIsProcessing(false)
               setError('Payment failed or was cancelled')
