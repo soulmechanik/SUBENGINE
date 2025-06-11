@@ -27,7 +27,7 @@ export default function SubscribePage() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
 
-  const reference = `BNI-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+  const internalReference = `BNI-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
   useEffect(() => {
     setMounted(true)
@@ -78,43 +78,35 @@ export default function SubscribePage() {
     return formattedPhone
   }
 
- const pollPaymentStatus = async (ref) => {
-  let attempts = 0
-  const maxAttempts = 10
-  const delay = 3000
+  const pollPaymentStatus = async (baniRef) => {
+    let attempts = 0
+    const maxAttempts = 10
+    const delay = 3000
 
-  const poll = async () => {
-    try {
-      const url = `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/status?reference=${ref}`
-      console.log('Polling URL:', url)
+    const poll = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/status?reference=${baniRef}`)
+        const data = await res.json()
+        console.log('🧾 Payment status response:', data)
 
-      const res = await fetch(url)
-      const text = await res.text()
-
-      console.log('Raw response:', text)
-
-      const data = JSON.parse(text)
-      console.log('🧾 Payment status response:', data)
-
-      if (['paid', 'successful', 'completed'].includes(data.status)) {
-        handleOnSuccess({ reference: ref })
-      } else if (attempts < maxAttempts) {
-        attempts++
-        setTimeout(poll, delay)
-      } else {
+        if (['paid', 'successful', 'completed'].includes(data.status)) {
+          handleOnSuccess({ reference: baniRef })
+        } else if (attempts < maxAttempts) {
+          attempts++
+          setTimeout(poll, delay)
+        } else {
+          setIsProcessing(false)
+          setError('Failed to verify payment status. Please contact support.')
+        }
+      } catch (err) {
+        console.error('Polling error:', err)
         setIsProcessing(false)
-        setError('Failed to verify payment status. Please contact support.')
+        setError('Failed to verify payment status. Please try again later.')
       }
-    } catch (err) {
-      console.error('Polling error:', err)
-      setIsProcessing(false)
-      setError('Failed to verify payment status. Please try again later.')
     }
+
+    poll()
   }
-
-  poll()
-}
-
 
   const handlePay = async () => {
     if (isSuccess) return
@@ -136,7 +128,7 @@ export default function SubscribePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reference,
+          reference: internalReference,
           telegramId,
           group: groupId,
           amount: Number(amount),
@@ -162,22 +154,24 @@ export default function SubscribePage() {
         firstName,
         lastName,
         merchantKey,
-        merchantRef: reference,
+        merchantRef: internalReference,
         metadata: {
           telegramId,
           groupId,
           duration,
-          internalReference: reference
+          internalReference
         },
         onClose: handleOnClose,
         callback: (response) => {
           console.log('Bani callback response:', response)
 
+          const baniRef = response.reference
+
           if (['successful', 'completed', 'paid'].includes(response.status)) {
-            handleOnSuccess(response)
+            handleOnSuccess({ reference: baniRef })
           } else if (['pending', 'payment_processing', 'processing'].includes(response.status)) {
             setError('⏳ Payment is processing. Verifying final status...')
-            pollPaymentStatus(reference)
+            pollPaymentStatus(baniRef)
           } else {
             setIsProcessing(false)
             setError(response.message || 'Payment failed or was cancelled')
