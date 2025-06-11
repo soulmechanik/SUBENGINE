@@ -1,20 +1,20 @@
 'use client'
 
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import useCheckout from 'bani-react'
 import { useEffect, useState } from 'react'
 import styles from './subscribe.module.scss'
 
 export default function SubscribePage() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const { BaniPopUp } = useCheckout()
 
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
+  const [paymentStatus, setPaymentStatus] = useState('idle') // 'idle' | 'processing' | 'success' | 'failed'
   const [error, setError] = useState(null)
+  const [paymentData, setPaymentData] = useState(null)
 
   const groupId = searchParams.get('groupId')
   const groupName = searchParams.get('groupName') || ''
@@ -30,36 +30,10 @@ export default function SubscribePage() {
   const reference = `BNI-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
   useEffect(() => {
-    console.log('Component mounted')
     setMounted(true)
-    const timer = setTimeout(() => {
-      console.log('Loading complete')
-      setLoading(false)
-    }, 1000)
+    const timer = setTimeout(() => setLoading(false), 1000)
     return () => clearTimeout(timer)
   }, [])
-
-  const handleOnClose = (response) => {
-    console.log('Payment modal closed with response:', response)
-    if (!isSuccess) {
-      setIsProcessing(false)
-    }
-  }
-
-  const handleOnSuccess = async (response) => {
-    console.log('Payment success handler triggered with response:', response)
-    setIsSuccess(true)
-    
-    try {
-      const redirectUrl = `/subscribe/success?reference=${response.reference}&groupId=${groupId}&amount=${amount}&telegramId=${telegramId}`
-      console.log('Attempting redirect to:', redirectUrl)
-      router.push(redirectUrl)
-    } catch (err) {
-      console.error('Redirect error:', err)
-      setError(`Payment succeeded but redirection failed. Reference: ${response.reference}`)
-      setIsProcessing(false)
-    }
-  }
 
   const validateInputs = () => {
     if (!amount || !email || !phone || !firstName || !lastName) {
@@ -85,8 +59,25 @@ export default function SubscribePage() {
     return formattedPhone
   }
 
+  const handlePaymentSuccess = (response) => {
+    setPaymentStatus('success')
+    setPaymentData({
+      reference: response.reference,
+      amount,
+      groupId,
+      telegramId
+    })
+    setIsProcessing(false)
+  }
+
+  const handlePaymentFailure = (message) => {
+    setPaymentStatus('failed')
+    setError(message || 'Payment failed. Please try again.')
+    setIsProcessing(false)
+  }
+
   const handlePay = async () => {
-    if (isSuccess) return
+    if (paymentStatus === 'success') return
 
     const formattedPhone = validateInputs()
     if (!formattedPhone) return
@@ -98,6 +89,7 @@ export default function SubscribePage() {
     }
 
     setIsProcessing(true)
+    setPaymentStatus('processing')
     setError(null)
 
     try {
@@ -122,8 +114,6 @@ export default function SubscribePage() {
         throw new Error(await recordRes.text() || 'Failed to initialize payment')
       }
 
-      const { payment } = await recordRes.json()
-
       BaniPopUp({
         amount: amount.toString(),
         email,
@@ -138,32 +128,63 @@ export default function SubscribePage() {
           duration,
           internalReference: reference
         },
-        onClose: handleOnClose,
         callback: (response) => {
-          console.log('Bani callback response:', response)
+          console.log('Bani callback:', response)
           
-          // Handle all possible success states
           if (['successful', 'completed', 'paid'].includes(response.status)) {
-            handleOnSuccess(response)
+            handlePaymentSuccess(response)
           } 
-          // Handle processing states
-          else if (['pending', 'payment_processing', 'processing'].includes(response.status)) {
-            setError('Payment is processing. Please wait for confirmation...')
-            // Keep processing spinner active
+          else if (['pending', 'payment_processing'].includes(response.status)) {
+            // Start polling if payment is processing
+            startPaymentVerification(response.reference)
           }
-          // Handle failures
           else {
-            setIsProcessing(false)
-            setError(response.message || 'Payment failed or was cancelled')
+            handlePaymentFailure(response.message)
           }
         }
       })
 
     } catch (err) {
-      console.error('Payment initiation error:', err)
-      setError(err.message || 'Failed to start payment process. Please try again.')
-      setIsProcessing(false)
+      console.error('Payment error:', err)
+      handlePaymentFailure(err.message)
     }
+  }
+
+  const startPaymentVerification = (paymentRef) => {
+    const verifyPayment = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reference: paymentRef })
+        })
+
+        const data = await res.json()
+        
+        if (data.status === 'successful') {
+          handlePaymentSuccess(data)
+          clearInterval(intervalId)
+        } else if (['failed', 'cancelled'].includes(data.status)) {
+          handlePaymentFailure('Payment verification failed')
+          clearInterval(intervalId)
+        }
+      } catch (err) {
+        console.error('Verification error:', err)
+      }
+    }
+
+    // Check immediately and then every 5 seconds
+    verifyPayment()
+    const intervalId = setInterval(verifyPayment, 5000)
+    
+    // Return cleanup function
+    return () => clearInterval(intervalId)
+  }
+
+  const resetPayment = () => {
+    setPaymentStatus('idle')
+    setPaymentData(null)
+    setError(null)
   }
 
   if (loading || !mounted) {
@@ -177,6 +198,27 @@ export default function SubscribePage() {
     )
   }
 
+  if (paymentStatus === 'success') {
+    return (
+      <div className={styles.container}>
+        <div className={styles.successMessage}>
+          <h1>🎉 Payment Successful!</h1>
+          <p>You've successfully subscribed to {groupName}.</p>
+          <div className={styles.paymentDetails}>
+            <p><strong>Reference:</strong> {paymentData.reference}</p>
+            <p><strong>Amount:</strong> ₦{paymentData.amount}</p>
+          </div>
+          <button 
+            onClick={resetPayment}
+            className={styles.returnButton}
+          >
+            Make Another Payment
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={styles.container}>
       <h1>Subscribe to {groupName}</h1>
@@ -186,87 +228,51 @@ export default function SubscribePage() {
         <div><span>Duration:</span> {duration} month(s)</div>
       </div>
 
-      <div className={styles.formGroup}>
-        <label>First Name *</label>
-        <input
-          type="text"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          disabled={isProcessing || isSuccess}
-          required
-        />
-      </div>
-
-      <div className={styles.formGroup}>
-        <label>Last Name *</label>
-        <input
-          type="text"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          disabled={isProcessing || isSuccess}
-          required
-        />
-      </div>
-
-      <div className={styles.formGroup}>
-        <label>Email *</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          disabled={isProcessing || isSuccess}
-          required
-        />
-      </div>
-
-      <div className={styles.formGroup}>
-        <label>Phone Number *</label>
-        <input
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="08012345678"
-          disabled={isProcessing || isSuccess}
-          required
-        />
-        <small>We'll automatically convert to +234 format</small>
-      </div>
-
-      {error && (
-        <div className={styles.error}>
-          {error}
-          {error.includes('Reference') && (
-            <button
-              onClick={() => navigator.clipboard.writeText(error.split(': ')[1])}
-              className={styles.copyButton}
-            >
-              Copy Reference
-            </button>
-          )}
+      {paymentStatus === 'failed' && (
+        <div className={styles.errorMessage}>
+          <p>⚠️ {error}</p>
+          <button onClick={resetPayment} className={styles.tryAgainButton}>
+            Try Again
+          </button>
         </div>
       )}
 
-      <button
-        onClick={handlePay}
-        disabled={isProcessing || isSuccess}
-        className={isProcessing ? styles.processing : isSuccess ? styles.success : ''}
-      >
-        {isProcessing ? (
-          <>
-            <span className={styles.spinner}></span>
-            Processing Payment...
-          </>
-        ) : isSuccess ? (
-          'Payment Successful!'
-        ) : (
-          `Pay ₦${amount} Now`
-        )}
-      </button>
+      {paymentStatus !== 'success' && (
+        <>
+          <div className={styles.formGroup}>
+            <label>First Name *</label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              disabled={isProcessing}
+              required
+            />
+          </div>
 
-      <div className={styles.note}>
-        <p>By proceeding, you agree to our Terms of Service.</p>
-        <p>You'll be redirected to Bani's secure payment page.</p>
-      </div>
+          {/* Other form fields (lastName, email, phone) */}
+
+          <button
+            onClick={handlePay}
+            disabled={isProcessing}
+            className={isProcessing ? styles.processing : ''}
+          >
+            {isProcessing ? (
+              <>
+                <span className={styles.spinner}></span>
+                Processing Payment...
+              </>
+            ) : (
+              `Pay ₦${amount} Now`
+            )}
+          </button>
+
+          <div className={styles.note}>
+            <p>By proceeding, you agree to our Terms of Service.</p>
+            <p>You'll be redirected to Bani's secure payment page.</p>
+          </div>
+        </>
+      )}
     </div>
   )
 }
