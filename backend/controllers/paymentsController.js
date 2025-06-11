@@ -13,7 +13,7 @@ exports.recordPayment = async (req, res) => {
   status,
   transactionRef, // <-- Add this
 } = req.body;
-;
+
 
     // Validate required fields
     const requiredFields = { reference, telegramId, groupId, amount, duration, email };

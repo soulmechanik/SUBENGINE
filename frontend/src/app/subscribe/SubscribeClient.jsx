@@ -27,6 +27,7 @@ export default function SubscribePage() {
   const [phone, setPhone] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+const reference = `BNPay-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
   useEffect(() => {
     setMounted(true)
@@ -114,6 +115,7 @@ export default function SubscribePage() {
           email,
           phone: formattedPhone,
           firstName,
+            reference,
           lastName,
           status: 'initiated'
         }),
@@ -138,6 +140,7 @@ export default function SubscribePage() {
           groupId, 
           duration, 
           telegramId,
+            reference,
           paymentId: _id // Include DB ID in metadata
         },
         onClose: handleOnClose,
