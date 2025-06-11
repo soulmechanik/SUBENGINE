@@ -5,30 +5,41 @@ module.exports = async (req, res) => {
   try {
     const { reference, status, transactionRef } = req.body
 
-    if (!reference || !transactionRef || status !== 'successful') {
+    if (!status || status !== 'successful') {
       return res.status(400).json({ message: 'Invalid verification data' })
     }
 
-    // Find the payment by reference
-    const payment = await Payment.findOne({ reference })
+    let payment = null
+
+    if (reference) {
+      payment = await Payment.findOne({ reference })
+    }
+
+    // fallback to transactionRef
+    if (!payment && transactionRef) {
+      payment = await Payment.findOne({ transactionRef })
+    }
+
+    // fallback to metadata.pay_ref
+    if (!payment && transactionRef) {
+      payment = await Payment.findOne({ 'metadata.pay_ref': transactionRef })
+    }
 
     if (!payment) {
       return res.status(404).json({ message: 'Payment not found' })
     }
 
-    // Update the payment status
+    // Update the payment
     payment.status = 'paid'
-    payment.transactionRef = transactionRef
+    if (transactionRef) payment.transactionRef = transactionRef
     payment.paidAt = new Date()
     await payment.save()
 
-    // Mark user as subscribed to the group
+    // Mark user as subscribed
     if (payment.telegramId && payment.group) {
       await Group.updateOne(
-        { _id: payment.group },
-        {
-          $addToSet: { subscribedUsers: payment.telegramId },
-        }
+        { groupId: payment.group },
+        { $addToSet: { subscribedUsers: payment.telegramId } }
       )
     }
 

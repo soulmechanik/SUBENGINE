@@ -18,7 +18,7 @@ group: {
 
   status: {
     type: String,
-    enum: ['pending', 'initiated', 'successful', 'failed'],
+    enum: ['pending', 'initiated', 'successful', 'paid', 'failed'],
     default: 'pending'
   },
   paidAt: { type: Date },

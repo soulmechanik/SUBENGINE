@@ -1,5 +1,6 @@
-// utils/subscriptionChecker.js
 const Payment = require('../models/Payment');
+const Group = require('../models/Group');
+
 const durationToDays = {
   monthly: 30,
   quarterly: 90,
@@ -13,21 +14,30 @@ async function checkSubscriptions() {
 
   const payments = await Payment.find({
     subscriptionStatus: 'active',
-    status: 'successful',
-  }).populate('group');
+    status: 'paid', // ✅ Make sure this matches your actual "paid" status
+  });
 
   const expiredUsers = [];
 
   for (const payment of payments) {
-    const { paidAt, duration, group, telegramId } = payment;
-    if (!paidAt || !durationToDays[duration] || !group || !group.groupId || !telegramId) continue;
+    const { paidAt, duration, group: groupId, telegramId } = payment;
+
+    if (!paidAt || !durationToDays[duration] || !groupId || !telegramId) continue;
 
     const expiryDate = new Date(paidAt);
     expiryDate.setDate(expiryDate.getDate() + durationToDays[duration]);
 
     if (now > expiryDate) {
+      // Mark subscription as expired
       payment.subscriptionStatus = 'expired';
       await payment.save();
+
+      // Manually get the group
+      const group = await Group.findOne({ groupId: groupId });
+      if (!group) {
+        console.warn(`⚠️ Group with groupId ${groupId} not found`);
+        continue;
+      }
 
       expiredUsers.push({
         telegramId,

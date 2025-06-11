@@ -9,6 +9,8 @@ const groupSchema = new mongoose.Schema({
     type: String,
     enum: ['monthly', 'quarterly', 'biannual', 'annual'],
   },
+  subscribedUsers: [{ type: String }],
+
   bankName: { type: String },
   bankCode: { type: String },
   accountNumber: { type: String },
