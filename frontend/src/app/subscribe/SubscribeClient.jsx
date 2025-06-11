@@ -30,43 +30,57 @@ export default function SubscribePage() {
   const reference = `BNI-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
   useEffect(() => {
+    console.log('Component mounted')
     setMounted(true)
-    const timer = setTimeout(() => setLoading(false), 1000)
+    const timer = setTimeout(() => {
+      console.log('Loading complete')
+      setLoading(false)
+    }, 1000)
     return () => clearTimeout(timer)
   }, [])
 
   const handleOnClose = (response) => {
-    console.log('Payment closed:', response)
+    console.log('Payment modal closed with response:', JSON.stringify(response, null, 2))
     if (!isSuccess) {
+      console.log('Payment was not successful, setting isProcessing to false')
       setIsProcessing(false)
+    } else {
+      console.log('Payment was already successful, keeping state')
     }
   }
 
   const handleOnSuccess = async (response) => {
+    console.log('Payment success handler triggered with response:', JSON.stringify(response, null, 2))
+    
     try {
-      router.push({
-        pathname: '/subscribe/success',
-        query: {
-          reference: response.reference,
-          groupId,
-          amount,
-          telegramId,
-        },
-      })
+      setIsSuccess(true)
+      console.log('Success state set to true, preparing redirect...')
+      
+      const redirectUrl = `/subscribe/success?reference=${response.reference}&groupId=${groupId}&amount=${amount}&telegramId=${telegramId}`
+      console.log('Attempting redirect to:', redirectUrl)
+      
+      router.push(redirectUrl)
+      console.log('Router.push called successfully')
     } catch (err) {
       console.error('Redirect error:', err)
-      setError('Payment succeeded, but redirection failed. Reference: ' + response.reference)
+      setError(`Payment succeeded, but redirection failed. Reference: ${response.reference}`)
       setIsProcessing(false)
+    } finally {
+      console.log('Success handler completed')
     }
   }
 
   const validateInputs = () => {
+    console.log('Validating inputs...')
+    
     if (!amount || !email || !phone || !firstName || !lastName) {
+      console.log('Validation failed: Missing required fields')
       alert('Please fill all required fields')
       return false
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      console.log('Validation failed: Invalid email format')
       alert('Please enter a valid email address')
       return false
     }
@@ -77,29 +91,42 @@ export default function SubscribePage() {
     }
 
     if (!/^\+234\d{10}$/.test(formattedPhone)) {
+      console.log('Validation failed: Invalid phone number format')
       alert('Please enter a valid Nigerian phone number (e.g. 08012345678)')
       return false
     }
 
+    console.log('Input validation passed')
     return formattedPhone
   }
 
   const handlePay = async () => {
-    if (isSuccess) return
+    console.log('Pay button clicked')
+    
+    if (isSuccess) {
+      console.log('Payment already succeeded, ignoring click')
+      return
+    }
 
     const formattedPhone = validateInputs()
-    if (!formattedPhone) return
+    if (!formattedPhone) {
+      console.log('Cannot proceed with payment due to validation errors')
+      return
+    }
 
     const merchantKey = process.env.NEXT_PUBLIC_BANI_PUBLIC_KEY
     if (!merchantKey) {
+      console.error('Missing merchant key')
       alert('Payment system error. Please contact support.')
       return
     }
 
+    console.log('Starting payment process...')
     setIsProcessing(true)
     setError(null)
 
     try {
+      console.log('Recording payment in database...')
       const recordRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -118,11 +145,15 @@ export default function SubscribePage() {
       })
 
       if (!recordRes.ok) {
-        throw new Error(await recordRes.text() || 'Failed to initialize payment')
+        const errorText = await recordRes.text()
+        console.error('Payment record failed:', errorText)
+        throw new Error(errorText || 'Failed to initialize payment')
       }
 
       const { payment } = await recordRes.json()
+      console.log('Payment recorded successfully:', payment)
 
+      console.log('Opening Bani payment popup...')
       BaniPopUp({
         amount: amount.toString(),
         email,
@@ -137,12 +168,23 @@ export default function SubscribePage() {
           duration,
           internalReference: reference
         },
-        onClose: handleOnClose,
+        onClose: (response) => {
+          console.log('Bani onClose callback:', JSON.stringify(response, null, 2))
+          handleOnClose(response)
+        },
         callback: (response) => {
-          console.log('Bani callback:', response)
-          if (['successful', 'pending'].includes(response.status)) {
+          console.log('Bani main callback received:', JSON.stringify(response, null, 2))
+          console.log('Response status:', response.status)
+          
+          if (response.status === 'successful') {
+            console.log('Payment successful, calling handleOnSuccess')
             handleOnSuccess(response)
+          } else if (response.status === 'pending') {
+            console.log('Payment pending')
+            setIsProcessing(false)
+            setError('Payment is pending confirmation. We will notify you when completed.')
           } else {
+            console.log('Payment failed or was cancelled')
             if (!isSuccess) {
               setIsProcessing(false)
               setError('Payment failed or was cancelled')
@@ -159,6 +201,7 @@ export default function SubscribePage() {
   }
 
   if (loading || !mounted) {
+    console.log('Rendering loading state')
     return (
       <div className={styles.container}>
         <div className={styles.skeletonHeader}></div>
@@ -169,6 +212,7 @@ export default function SubscribePage() {
     )
   }
 
+  console.log('Rendering main component UI')
   return (
     <div className={styles.container}>
       <h1>Subscribe to {groupName}</h1>
@@ -229,7 +273,10 @@ export default function SubscribePage() {
           {error}
           {error.includes('reference') && (
             <button
-              onClick={() => navigator.clipboard.writeText(error.split(': ')[1])}
+              onClick={() => {
+                navigator.clipboard.writeText(error.split(': ')[1])
+                console.log('Reference copied to clipboard')
+              }}
               className={styles.copyButton}
             >
               Copy Reference
