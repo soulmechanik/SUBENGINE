@@ -97,80 +97,83 @@ export default function SubscribePage() {
     setIsProcessing(false)
   }
 
-  const handlePay = async () => {
-    if (paymentStatus === 'success') return
+ const handlePay = async () => {
+  if (paymentStatus === 'success') return
 
-    const validation = validateInputs()
-    if (!validation) return
+  const validation = validateInputs()
+  if (!validation) return
 
-    const { formattedPhone, customerData } = validation
+  const { formattedPhone, customerData } = validation
 
-    const merchantKey = process.env.NEXT_PUBLIC_BANI_PUBLIC_KEY
-    if (!merchantKey) {
-      alert('Payment system error. Please contact support.')
-      return
-    }
-
-    setIsProcessing(true)
-    setPaymentStatus('processing')
-    setError(null)
-
-    try {
-      // Record payment in your database
-      const recordRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reference,
-          telegramId,
-          group: groupId,
-          amount: Number(amount),
-          duration,
-          customerData,
-          status: 'pending'
-        }),
-      })
-
-      if (!recordRes.ok) {
-        throw new Error(await recordRes.text() || 'Failed to initialize payment')
-      }
-
-      // Initialize Bani payment
-      BaniPopUp({
-        amount: amount.toString(),
-        email,
-        phoneNumber: formattedPhone,
-        firstName,
-        lastName,
-        merchantKey,
-        merchantRef: reference,
-        metadata: {
-          telegramId,
-          groupId,
-          duration,
-          internalReference: reference,
-          customerData
-        },
-        callback: (response) => {
-          console.log('Bani callback:', response)
-          
-          if (['successful', 'completed', 'paid'].includes(response.status)) {
-            handlePaymentSuccess(response)
-          } 
-          else if (['pending', 'payment_processing'].includes(response.status)) {
-            startPaymentVerification(response.reference)
-          }
-          else {
-            handlePaymentFailure(response.message || 'Payment could not be completed')
-          }
-        }
-      })
-
-    } catch (err) {
-      console.error('Payment error:', err)
-      handlePaymentFailure(err.message || 'An unexpected error occurred')
-    }
+  const merchantKey = process.env.NEXT_PUBLIC_BANI_PUBLIC_KEY
+  if (!merchantKey) {
+    alert('Payment system error. Please contact support.')
+    return
   }
+
+  setIsProcessing(true)
+  setPaymentStatus('processing')
+  setError(null)
+
+  try {
+    // Record payment in backend
+    const recordRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/record`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reference,
+        telegramId,
+        group: groupId,
+        amount: Number(amount),
+        duration,
+        customer: {
+          email,
+          phone: formattedPhone,
+          firstName,
+          lastName
+        },
+        status: 'pending'
+      }),
+    })
+
+    if (!recordRes.ok) {
+      throw new Error(await recordRes.text() || 'Failed to initialize payment')
+    }
+
+    // Launch Bani popup
+    BaniPopUp({
+      amount: amount.toString(),
+      email,
+      phoneNumber: formattedPhone,
+      firstName,
+      lastName,
+      merchantKey,
+      merchantRef: reference,
+      metadata: {
+        telegramId,
+        groupId,
+        duration,
+        internalReference: reference
+      },
+      callback: (response) => {
+        console.log('Bani callback:', response)
+
+        if (['successful', 'completed', 'paid'].includes(response.status)) {
+          handlePaymentSuccess(response)
+        } else if (['pending', 'payment_processing'].includes(response.status)) {
+          startPaymentVerification(response.reference)
+        } else {
+          handlePaymentFailure(response.message || 'Payment could not be completed')
+        }
+      }
+    })
+
+  } catch (err) {
+    console.error('Payment error:', err)
+    handlePaymentFailure(err.message || 'An unexpected error occurred')
+  }
+}
+
 
   const startPaymentVerification = (paymentRef) => {
     let intervalId
