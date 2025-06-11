@@ -49,6 +49,12 @@ async function handlePaymentEvent(data, res) {
   const metadata = data.custom_data || {};
   const paymentId = metadata.paymentId;
 
+  console.log(`Processing ${data.pay_method} (Ref: ${baniReference}) - Payment ID: ${paymentId}`);
+
+  if (!paymentId) {
+    console.warn('⚠️  No paymentId found in metadata');
+  }
+
   if (!baniReference) {
     return res.status(400).json({ error: 'Missing payment reference' });
   }
@@ -81,6 +87,7 @@ async function handlePaymentEvent(data, res) {
       return res.status(200).json({ message: 'Status not processed' });
   }
 }
+
 
 async function handlePaidPayment(payment, data, baniReference, res) {
   // If no existing record found, create new one

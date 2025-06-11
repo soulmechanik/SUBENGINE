@@ -124,23 +124,24 @@ export default function SubscribePage() {
 
       const { _id } = await recordRes.json()
 
-      BaniPopUp({
-        amount: amount.toString(),
-        email,
-        phoneNumber: formattedPhone,
-        firstName,
-        lastName,
-        merchantKey,
-        metadata: {
-          groupId,
-          duration,
-          telegramId,
-          reference,
-          paymentId: _id
-        },
-        onClose: handleOnClose,
-        callback: (response) => handleOnSuccess(response, _id)
-      })
+     BaniPopUp({
+  amount: amount.toString(),
+  email,
+  phoneNumber: formattedPhone,
+  firstName,
+  lastName,
+  merchantKey,
+  custom_data: {  // ✅ correct key Bani expects
+    groupId,
+    duration,
+    telegramId,
+    reference,
+    paymentId: _id
+  },
+  onClose: handleOnClose,
+  callback: (response) => handleOnSuccess(response, _id)
+})
+
 
     } catch (err) {
       console.error('Payment initiation error:', err)
