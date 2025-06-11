@@ -33,8 +33,7 @@ export default function SubscribePage() {
   useEffect(() => {
     setMounted(true)
     const timer = setTimeout(() => setLoading(false), 1000)
-    
-    // Check for pending payments on mount
+
     const pendingRef = localStorage.getItem('lastPaymentReference')
     if (pendingRef && !isSuccess && !isProcessing) {
       if (confirm('You have a pending payment. Would you like to check its status?')) {
@@ -44,7 +43,7 @@ export default function SubscribePage() {
         localStorage.removeItem('lastPaymentReference')
       }
     }
-    
+
     return () => clearTimeout(timer)
   }, [])
 
@@ -59,20 +58,18 @@ export default function SubscribePage() {
     setIsSuccess(true)
     setIsProcessing(false)
     localStorage.removeItem('lastPaymentReference')
-    
+
     try {
-      // Update backend record
-      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/update`, {
+      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reference: response.reference,
-          status: 'successful',
-          internalReference: internalReference
+          reference: internalReference,
+          transactionRef: response.reference,
+          status: 'successful'
         }),
       })
 
-      // Then redirect
       const redirectUrl = `/subscribe/success?reference=${response.reference}&groupId=${groupId}&amount=${amount}&telegramId=${telegramId}`
       router.push(redirectUrl)
     } catch (err) {
@@ -113,34 +110,37 @@ export default function SubscribePage() {
     const poll = async () => {
       try {
         setPollingStatus(`Checking payment status (${attempts + 1}/${maxAttempts})...`)
-        
+
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/payments/verify`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY}`
           },
-          body: JSON.stringify({ reference: baniRef })
+          body: JSON.stringify({
+            reference: internalReference,
+            transactionRef: baniRef,
+            status: 'successful'
+          }),
         })
 
-        // Check response content type
         const contentType = res.headers.get('content-type')
         if (!contentType || !contentType.includes('application/json')) {
           const text = await res.text()
-          throw new Error(`Server returned unexpected format: ${text.substring(0, 100)}...`)
+          throw new Error(`Unexpected server response: ${text}`)
         }
 
         const data = await res.json()
         console.log('Payment status response:', data)
 
-        if (data.success && ['paid', 'successful', 'completed'].includes(data.status)) {
-          handleOnSuccess({ reference: baniRef, ...data })
+        if (data.payment) {
+          handleOnSuccess({ reference: baniRef })
         } else if (attempts < maxAttempts) {
           attempts++
           setTimeout(poll, delay)
         } else {
           setIsProcessing(false)
-          setError(data.message || 'Payment verification timed out. Please check your email for confirmation.')
+          setError(data.message || 'Payment verification timed out.')
           localStorage.removeItem('lastPaymentReference')
         }
       } catch (err) {
@@ -150,7 +150,7 @@ export default function SubscribePage() {
           setTimeout(poll, delay)
         } else {
           setIsProcessing(false)
-          setError('Failed to verify payment status. Please contact support with your reference number.')
+          setError('Failed to verify payment. Contact support with your reference number.')
           localStorage.removeItem('lastPaymentReference')
         }
       }
@@ -221,13 +221,11 @@ export default function SubscribePage() {
 
           if (response.success === true || ['successful', 'completed', 'paid'].includes(response.status)) {
             handleOnSuccess({ reference: baniRef })
-          } 
-          else if (['pending', 'payment_processing', 'processing'].includes(response.status)) {
+          } else if (['pending', 'payment_processing', 'processing'].includes(response.status)) {
             setError('⏳ Payment is processing. Please wait...')
             localStorage.setItem('lastPaymentReference', baniRef)
             pollPaymentStatus(baniRef)
-          }
-          else {
+          } else {
             setIsProcessing(false)
             setError(response.message || `Payment failed. Status: ${response.status}`)
             localStorage.removeItem('lastPaymentReference')
@@ -240,8 +238,7 @@ export default function SubscribePage() {
       setError(err.message || 'Failed to start payment process. Please try again.')
       setIsProcessing(false)
       localStorage.removeItem('lastPaymentReference')
-      
-      // Log error to backend for debugging
+
       await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/errors`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -282,7 +279,6 @@ export default function SubscribePage() {
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
           disabled={isProcessing || isSuccess}
-          required
         />
       </div>
 
@@ -293,7 +289,6 @@ export default function SubscribePage() {
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
           disabled={isProcessing || isSuccess}
-          required
         />
       </div>
 
@@ -304,7 +299,6 @@ export default function SubscribePage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={isProcessing || isSuccess}
-          required
         />
       </div>
 
@@ -316,7 +310,6 @@ export default function SubscribePage() {
           onChange={(e) => setPhone(e.target.value)}
           placeholder="08012345678"
           disabled={isProcessing || isSuccess}
-          required
         />
         <small>We'll automatically convert to +234 format</small>
       </div>
