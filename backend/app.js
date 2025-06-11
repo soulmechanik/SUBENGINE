@@ -16,15 +16,7 @@ app.use(cors({
 }));
 
 // ✅ Bani Webhook raw body parser (must come before express.json)
-app.use('/api/webhook/bani', express.raw({ type: '*/*' }), (req, res, next) => {
-  req.rawBody = req.body;
-  try {
-    req.body = JSON.parse(req.rawBody.toString('utf8'));
-  } catch (err) {
-    return res.status(400).json({ error: 'Invalid JSON payload' });
-  }
-  next();
-});
+
 
 // ✅ Normal body parsers after raw body
 app.use(express.json());
