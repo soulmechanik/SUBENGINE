@@ -161,13 +161,13 @@ export default function SubscribePage() {
         },
         onClose: handleOnClose,
         callback: (response) => {
-          if (response.status === 'successful') {
-            handleOnSuccess(response)
-          } else {
-            setIsProcessing(false)
-            setError('Payment failed or was cancelled')
-          }
-        }
+  if (response.status === 'successful' || response.status === 'pending') {
+    handleOnSuccess(response)
+  } else {
+    setIsProcessing(false)
+    setError('Payment failed or was cancelled')
+  }
+}
       })
 
     } catch (err) {
