@@ -1,85 +1,112 @@
-const express = require('express');
-const crypto = require('crypto');
 const Payment = require('../models/Payment');
-const router = express.Router();
+const Group = require('../models/Group');
+const User = require('../models/User');
 
-const BANI_PRIVATE_KEY = process.env.BANI_PRIVATE_KEY;
 
-// IMPORTANT: This middleware ensures you receive raw body for HMAC verification
-router.post(
-  '/bani',
-  express.raw({ type: 'application/json' }),
-  async (req, res) => {
-    try {
-      const rawBody = req.body;
-      const headers = req.headers;
+exports.handleBaniWebhook = async (req, res) => {
+  try {
+    const event = req.body.event;
+    const paymentData = req.body.data;
+    
+    console.log(`🔄 Processing Bani webhook event: ${event}`);
 
-      // HMAC Verification using BANI-HOOK-SIGNATURE
-      const signature = Buffer.from(headers['bani-hook-signature'] || '', 'utf8');
-      const computedHmac = crypto
-        .createHmac('sha256', BANI_PRIVATE_KEY)
-        .update(rawBody)
-        .digest('hex');
-      const digest = Buffer.from(computedHmac, 'utf8');
-
-      const verified =
-        signature.length === digest.length &&
-        crypto.timingSafeEqual(digest, signature);
-
-      if (!verified) {
-        console.warn('Invalid webhook signature');
-        return res.status(401).json({ message: 'Invalid signature' });
-      }
-
-      const eventData = JSON.parse(rawBody);
-      const { event, data } = eventData;
-
-      // Only handle successful payin events
-      if (!event.startsWith('payin_') || data.pay_status !== 'paid') {
-        return res.status(200).json({ message: 'Ignored event' });
-      }
-
-      const {
-        pay_ref,
-        transaction_ref,
-        customer_ref,
-        actual_amount_paid,
-        pay_method,
-      } = data;
-
-      const payment = await Payment.findOne({ reference: customer_ref });
-
-      if (!payment) {
-        console.error('Payment not found for reference:', customer_ref);
-        return res.status(404).json({ message: 'Payment not found' });
-      }
-
-      if (payment.status === 'successful') {
-        return res.status(200).json({ message: 'Already processed' });
-      }
-
-      const commission = actual_amount_paid * 0.05;
-      const netAmount = actual_amount_paid - commission;
-
-      payment.status = 'successful';
-      payment.subscriptionStatus = 'active';
-      payment.paidAt = new Date();
-      payment.transactionRef = transaction_ref;
-      payment.amount = actual_amount_paid;
-      payment.paymentMethod = pay_method;
-      payment.commission = commission;
-      payment.netAmount = netAmount;
-
-      await payment.save();
-
-      // TODO: Trigger Telegram group access logic here
-
-      return res.status(200).json({ message: 'Payment updated' });
-    } catch (error) {
-      console.error('Webhook error:', error);
-      return res.status(500).json({ message: 'Webhook failed' });
+    // Only process successful payments
+    if (event !== 'payment.successful') {
+      console.log(`ℹ️ Skipping non-payment event: ${event}`);
+      return res.status(200).json({ message: 'Event not processed' });
     }
-  }
-);
 
-module.exports = router;
+    // Validate required payment data
+    if (!paymentData?.reference || !paymentData?.amount) {
+      console.error('⚠️ Missing required payment data');
+      return res.status(400).json({ error: 'Missing required payment data' });
+    }
+
+    // Check if payment already exists
+    const existingPayment = await Payment.findOne({ reference: paymentData.reference });
+    
+    if (existingPayment) {
+      // Update existing payment if not already marked successful
+      if (existingPayment.status !== 'successful') {
+        existingPayment.status = 'successful';
+        existingPayment.paidAt = new Date();
+        existingPayment.transactionRef = paymentData.transactionRef;
+        existingPayment.paymentMethod = paymentData.paymentMethod;
+        existingPayment.metadata = paymentData;
+        
+        await existingPayment.save();
+        console.log(`✅ Updated existing payment: ${paymentData.reference}`);
+      }
+      return res.status(200).json({ message: 'Payment updated' });
+    }
+
+    // Extract metadata from payment
+    const metadata = paymentData.metadata || {};
+    const { telegramId, groupId, duration } = metadata;
+    
+    if (!telegramId || !groupId || !duration) {
+      console.error('⚠️ Missing required metadata', metadata);
+      return res.status(400).json({ error: 'Missing required metadata' });
+    }
+
+    // Calculate commission and net amount
+    const commission = paymentData.amount * 0.05;
+    const netAmount = paymentData.amount - commission;
+
+    // Create new payment record
+    const newPayment = new Payment({
+      reference: paymentData.reference,
+      telegramId,
+      group: groupId,
+      amount: paymentData.amount,
+      duration,
+      email: paymentData.email,
+      phone: paymentData.phoneNumber,
+      status: 'successful',
+      paidAt: new Date(),
+      transactionRef: paymentData.transactionRef,
+      paymentMethod: paymentData.paymentMethod,
+      subscriptionStatus: 'active',
+      commission,
+      netAmount,
+      metadata: paymentData
+    });
+
+    await newPayment.save();
+    console.log(`💰 New payment recorded: ${paymentData.reference}`);
+
+    // Update user subscription
+    await updateUserSubscription(telegramId, groupId, duration);
+    
+
+
+    return res.status(200).json({ message: 'Webhook processed successfully' });
+  } catch (err) {
+    console.error('❌ Webhook processing error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+async function updateUserSubscription(telegramId, groupId, duration) {
+  try {
+    // Calculate expiration date based on duration
+    const durationInMonths = parseInt(duration);
+    const expirationDate = new Date();
+    expirationDate.setMonth(expirationDate.getMonth() + durationInMonths);
+
+    // Update user's subscription
+    await User.findOneAndUpdate(
+      { telegramId },
+      { 
+        $addToSet: { subscribedGroups: groupId },
+        $set: { subscriptionExpiresAt: expirationDate }
+      },
+      { new: true, upsert: true }
+    );
+
+    console.log(`🔄 Updated subscription for user ${telegramId} in group ${groupId}`);
+  } catch (error) {
+    console.error('Failed to update user subscription:', error);
+    throw error;
+  }
+}

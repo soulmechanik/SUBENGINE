@@ -9,11 +9,12 @@ exports.recordPayment = async (req, res) => {
       group, // group ID
       amount,
       duration,
-      email
+      email,
+      phoneNumber
     } = req.body;
 
     // Validate required fields
-    if (!reference || !telegramId || !group || !amount || !duration) {
+    if (!reference || !telegramId || !group || !amount || !duration || !email) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -23,6 +24,8 @@ exports.recordPayment = async (req, res) => {
       return res.status(409).json({ error: 'Payment already recorded' });
     }
 
+    // Create payment record with pending status
+    // This will be updated when the webhook is received
     const commission = amount * 0.05;
     const netAmount = amount - commission;
 
@@ -33,6 +36,7 @@ exports.recordPayment = async (req, res) => {
       amount,
       duration,
       email,
+      phone: phoneNumber,
       status: 'pending',
       subscriptionStatus: 'active',
       commission,
@@ -41,7 +45,12 @@ exports.recordPayment = async (req, res) => {
 
     await payment.save();
 
-    return res.status(201).json({ message: 'Payment recorded', payment });
+    return res.status(201).json({ 
+      message: 'Payment initiated', 
+      payment,
+      // Include Bani public key for frontend
+      baniPublicKey: process.env.BANI_PUBLIC_KEY 
+    });
   } catch (err) {
     console.error('Error recording payment:', err);
     return res.status(500).json({ error: 'Server error' });
