@@ -1,5 +1,6 @@
 const { Telegraf } = require('telegraf');
 const dotenv = require('dotenv');
+const { setupGroupAccessHandlers } = require('./handlers/groupAccessHandler');
 const myChatMemberHandler = require('./handlers/myChatMember');
 const { getBankList, resolveAccount } = require('../backend/utils/paystack');
 const User = require('../backend/models/User');
@@ -695,19 +696,6 @@ bot.on('text', async (ctx) => {
 
 
 
-setInterval(async () => {
-  console.log('⏱️ Running scheduled subscription check...');
-  const expiredUsers = await checkSubscriptions();
-
-  for (const user of expiredUsers) {
-    try {
-      await bot.telegram.banChatMember(user.groupId, user.telegramId);
-      console.log(`🚫 Banned user ${user.telegramId} from group ${user.groupId}`);
-    } catch (error) {
-      console.error(`❌ Error banning user ${user.telegramId}: ${error.description}`);
-    }
-  }
-}, 1000 * 60 * 10); // every 10 minutes
 
 
 // ===================== EVENT HANDLERS ===================== //
@@ -796,9 +784,20 @@ bot.on('my_chat_member', async (ctx) => {
   }
 });
 
+
+
+
+setupGroupAccessHandlers(bot);
+
 bot.catch((err, ctx) => {
   console.error('Bot error:', err);
   return ctx.reply('❌ An error occurred. Please try again later.');
 });
+
+bot.use((ctx, next) => {
+  console.log('📦 Received update:', ctx.updateType);
+  return next();
+});
+
 
 module.exports = bot;
