@@ -1,4 +1,4 @@
-const connectDB = require('./shared/db');
+const connectDB = require('../shared/db');
 const bot = require('./bot');
 const expireSubscriptions = require('../backend/controllers/expireSubscriptionsController'); // 👈 import
 
