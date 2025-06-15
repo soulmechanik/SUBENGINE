@@ -1,4 +1,4 @@
-// bot/handlers/myChatMember.js
+
 const User = require('../../backend/models/User');
 const Group = require('../../backend/models/Group');
 

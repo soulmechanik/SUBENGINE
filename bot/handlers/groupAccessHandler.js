@@ -36,7 +36,7 @@ async function enforceAccess(telegram, userId, chatId) {
       await telegram.banChatMember(chatId, userId);
 
       const group = await Group.findOne({ groupId: chatId });
-      const subLink = group?.subLink || `https://yourdomain.com/subscribe?group=${chatId}`;
+      const subLink = group?.subLink || `https://subchatpro.com/subscribe?group=${chatId}`;
 
       try {
         await telegram.sendMessage(
@@ -76,7 +76,7 @@ async function handleJoinRequest(ctx) {
       console.log(`🚫 Declined join request for user ${userId}`);
 
       const group = await Group.findOne({ groupId: chatId });
-      const subLink = group?.subLink || `https://yourdomain.com/subscribe?group=${chatId}`;
+      const subLink = group?.subLink || `https://subchatpro.com/subscribe?group=${chatId}`;
 
       try {
         await ctx.telegram.sendMessage(
