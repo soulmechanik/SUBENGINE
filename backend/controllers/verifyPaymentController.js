@@ -1,4 +1,4 @@
-const Payment = require('../models/Payment')
+const Payment = require('../models/payment')
 const Group = require('../models/Group')
 
 module.exports = async (req, res) => {

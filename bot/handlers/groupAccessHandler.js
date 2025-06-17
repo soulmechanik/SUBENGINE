@@ -1,4 +1,4 @@
-const Payment = require('../../backend/models/Payment');
+const Payment = require('../../backend/models/payment');
 const Group = require('../../backend/models/Group');
 
 // ⏳ Used to calculate when a subscription expires

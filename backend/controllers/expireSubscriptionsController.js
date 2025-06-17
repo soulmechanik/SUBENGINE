@@ -1,4 +1,4 @@
-const Payment = require('../models/Payment');
+const Payment = require('../models/payment');
 
 async function expireSubscriptions() {
   const now = new Date();
