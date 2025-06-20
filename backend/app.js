@@ -5,6 +5,9 @@ const cors = require('cors');
 const webhookRoutes = require('./routes/webhook');
 const paymentRoutes = require('./routes/paymentRoutes');
 const paystackRoutes = require('./routes/paystackRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+
+const authRoutes = require('./routes/auth')
 require('dotenv').config();
 
 const app = express();
@@ -59,7 +62,13 @@ app.post(
 // Standard routes
 app.use('/api/payments', paymentRoutes);
 app.use('/api', paystackRoutes);
-app.use('/api/webhook', webhookRoutes); // this can contain other webhook types
+app.use('/api/webhook', webhookRoutes); 
+app.use('/api/auth', authRoutes); 
+app.use('/api/admin', dashboardRoutes);
+
+
+
+
 
 // Health check
 app.get('/', (req, res) => res.send('SubEngine API is live ✅'));

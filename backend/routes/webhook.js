@@ -6,7 +6,7 @@ const crypto = require('crypto');
 // Middleware to verify Bani webhook signature
 const verifyBaniSignature = (req, res, next) => {
   const signature = req.headers['x-bani-signature'];
-  const secret = process.env.BANI_WEBHOOK_SECRET;
+  const secret = process.env.BANI_PRIVATE_KEY;
   
   if (!signature) {
     console.error('⚠️ Missing Bani signature header');

@@ -108,23 +108,32 @@ bot.start(async (ctx) => {
     ctx.session.subscribingGroupId = groupId;
     ctx.session.step = 'awaiting_subscription_confirmation';
 
-    return ctx.reply(
-      `📋 Group Subscription Details:\n\n` +
-      `🏷️ Name: ${group.groupTitle}\n` +
-      `💰 Subscription Amount: ₦${group.subscriptionAmount}\n` +
-      `⏳ Duration: ${group.subscriptionDuration}\n\n` +
-      `Would you like to subscribe to this group?`,
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '✅ Yes, Subscribe', callback_data: 'confirm_subscription' },
-              { text: '❌ No, Cancel', callback_data: 'cancel_subscription' }
-            ]
-          ]
-        }
-      }
-    );
+   return ctx.reply(
+  `📋 *Group Subscription Details:*\n\n` +
+  `🏷️ *Name:* ${group.groupTitle}\n` +
+  `💰 *Subscription:* ₦${group.subscriptionAmount} / ${group.subscriptionDuration}\n\n` +
+  `Would you like to proceed with your subscription?\n\n` +
+  `🚨 *Please Note:*\n` +
+  `- No refunds. All purchases are final.\n` +
+  `- Digital access is granted immediately upon payment.\n` +
+  `- Use of fraudulent cards will lead to a permanent ban from all groups.\n` +
+  `- Access will be revoked automatically if your payment fails or expires.\n\n` +
+  `📩 For assistance, contact:\n` +
+  `- Email: subchatpro@gmail.com\n` +
+  `- Telegram: @SE_support_subengine`,
+  {
+    parse_mode: 'Markdown',
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '✅ Yes, Subscribe', callback_data: 'confirm_subscription' },
+          { text: '❌ No, Cancel', callback_data: 'cancel_subscription' }
+        ]
+      ]
+    }
+  }
+);
+
   }
 
   // Normal start command
