@@ -144,7 +144,10 @@ bot.start(async (ctx) => {
 
   if (existingUser && existingUser.email && typeof existingUser.isGroupOwner === 'boolean') {
     if (existingUser.isGroupOwner) {
-      return ctx.reply('👋 Welcome back, Group Owner! Use /configure to manage your groups.');
+    return ctx.reply(
+  `👋 Welcome back, Group Owner!\n\nTo manage your groups, use the /configure command.\n\n📌 Don’t forget to add this bot to any group you'd like to manage — and make sure to grant it admin rights so it can function properly.`
+);
+
     } else {
       return ctx.reply("👋 Welcome back! We'll notify you when groups become available for subscription.");
     }
