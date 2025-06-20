@@ -118,7 +118,7 @@ bot.start(async (ctx) => {
   `- Digital access is granted immediately upon payment.\n` +
   `- Use of fraudulent cards will lead to a permanent ban from all groups.\n` +
   `- Access will be revoked automatically if your payment fails or expires.\n\n` +
-  `📩 For assistance, contact:\n` +
+  `📩 For any assistance, contact:\n` +
   `- Email: subchatpro@gmail.com\n` +
   `- Telegram: @SE_support_subengine`,
   {
