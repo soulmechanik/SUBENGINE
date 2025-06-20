@@ -1,3 +1,5 @@
+// backend/controllers/authController.js
+
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
@@ -29,21 +31,9 @@ exports.login = async (req, res) => {
     const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: '7d' });
     console.log('🔑 Token generated:', token);
 
-    // Log environment info
-    console.log('🌍 NODE_ENV:', process.env.NODE_ENV);
-    console.log('🌐 Setting cookie with domain:', '.subchatpro.com');
-
-    // ✅ Set cross-origin secure cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: true, // Always true in production
-      sameSite: 'None', // Required for cross-origin cookies
-      domain: '.subchatpro.com', // Needed for Render API <-> Vercel app
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    console.log('🍪 Cookie set successfully. Login complete.');
-    res.status(200).json({ message: 'Login successful', email });
+    // 🚫 No cookie needed — token will be stored in localStorage on frontend
+    console.log('📦 Sending token in response body (for localStorage use)');
+    res.status(200).json({ message: 'Login successful', email, token });
   } catch (err) {
     console.error('💥 Login Error:', err);
     res.status(500).json({ message: 'Server error' });

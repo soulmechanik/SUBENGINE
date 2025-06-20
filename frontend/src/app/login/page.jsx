@@ -24,7 +24,6 @@ export default function Login() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // ✅ Include cookies for auth
         body: JSON.stringify({ email, password }),
       });
 
@@ -38,6 +37,10 @@ export default function Login() {
         setIsLoading(false);
         return;
       }
+
+      // ✅ Store token in localStorage
+      localStorage.setItem('token', data.token);
+      console.log('🔐 Token stored in localStorage');
 
       console.log('✅ Login successful — navigating to /dashboard/overview');
       router.push('/dashboard/overview');
