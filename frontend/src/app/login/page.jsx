@@ -18,6 +18,8 @@ export default function Login() {
     setIsLoading(true);
     setErrorMsg('');
 
+    console.log('📨 Attempting login with:', email);
+
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/auth/login`, {
         method: 'POST',
@@ -26,17 +28,21 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('🧾 Raw response:', res);
       const data = await res.json();
+      console.log('📦 Response data:', data);
 
       if (!res.ok) {
+        console.warn('❌ Login failed:', data.message);
         setErrorMsg(data.message || 'Login failed');
         setIsLoading(false);
         return;
       }
 
+      console.log('✅ Login successful — navigating to /dashboard/overview');
       router.push('/dashboard/overview');
     } catch (err) {
-      console.error(err);
+      console.error('💥 Login error:', err);
       setErrorMsg('An error occurred. Try again.');
     } finally {
       setIsLoading(false);

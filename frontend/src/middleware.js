@@ -8,33 +8,36 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl;
   console.log('🛡️ Middleware triggered for:', pathname);
 
-  // Allow public pages to be accessed without auth
+  // Check if the request is for a public route
   if (PUBLIC_ROUTES.includes(pathname)) {
-    console.log('🌐 Public route, continuing:', pathname);
+    console.log(`🌐 Public route matched (${pathname}) → Allowing access`);
     return NextResponse.next();
   }
 
   const token = request.cookies.get('token')?.value;
+  console.log('🍪 Cookie token found:', token ? '[YES]' : '[NO]');
 
   if (!token) {
-    console.warn('🚫 No token found — redirecting to /login');
+    console.warn(`🚫 No token in cookies → Redirecting to /login`);
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
   try {
-    // Use secure secret (should be from server-only env var)
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    await jwtVerify(token, secret);
+    console.log('🔐 Verifying token with JWT_SECRET');
 
-    console.log('✅ Token verified. Proceeding.');
+    const verified = await jwtVerify(token, secret);
+    console.log('✅ Token verified:', verified?.payload);
+
     return NextResponse.next();
   } catch (err) {
-    console.error('❌ Token invalid — redirecting to /login:', err.message);
+    console.error('❌ JWT verification failed → Redirecting to /login');
+    console.error('💣 Reason:', err.message);
     return NextResponse.redirect(new URL('/login', request.url));
   }
 }
 
-// This tells Next.js which paths the middleware should run on
+// Paths where middleware should run
 export const config = {
   matcher: ['/dashboard/:path*', '/admin/:path*'],
 };
