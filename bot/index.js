@@ -10,7 +10,10 @@ const expireSubscriptions = require('../backend/controllers/expireSubscriptionsC
 
   // 🔁 Start subscription expiry check every hour
   await expireSubscriptions(); // Run once on startup
- setInterval(expireSubscriptions, 30 * 1000);
+
+  
+setInterval(expireSubscriptions, 60 * 60 * 1000); // 1 hour
+
  // Then run every hour
 })();
 
