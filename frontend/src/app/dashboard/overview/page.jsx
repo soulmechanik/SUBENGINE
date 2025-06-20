@@ -12,19 +12,34 @@ export default function OverviewPage() {
   useEffect(() => {
     const fetchData = async () => {
       const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        console.warn('🚫 No token found, redirecting to login...');
+        window.location.href = '/login';
+        return;
+      }
 
       try {
         const [revRes, statsRes, txRes] = await Promise.all([
-          fetch(`${BASE_URL}/api/admin/revenue/weekly`).then(res => res.json()),
-          fetch(`${BASE_URL}/api/admin/stats`).then(res => res.json()),
-          fetch(`${BASE_URL}/api/admin/transactions`).then(res => res.json()),
+          fetch(`${BASE_URL}/api/admin/revenue/weekly`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).then(res => res.json()),
+
+          fetch(`${BASE_URL}/api/admin/stats`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).then(res => res.json()),
+
+          fetch(`${BASE_URL}/api/admin/transactions`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).then(res => res.json()),
         ]);
 
         setRevenue(revRes.revenue || []);
         setStats(statsRes || {});
         setTransactions(txRes.transactions || []);
       } catch (err) {
-        console.error('Overview fetch error:', err);
+        console.error('❌ Overview fetch error:', err);
       }
     };
 
@@ -53,7 +68,8 @@ export default function OverviewPage() {
             <ul className={styles.revenueList}>
               {revenue.map((owner, idx) => (
                 <li key={idx}>
-                  <strong>{owner.username || owner.telegramId}</strong> – ₦{owner.totalRevenue.toLocaleString()} from {owner.groups.length} group(s)
+                  <strong>{owner.username || owner.telegramId}</strong> – ₦
+                  {owner.totalRevenue.toLocaleString()} from {owner.groups.length} group(s)
                 </li>
               ))}
             </ul>

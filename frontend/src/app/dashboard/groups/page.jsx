@@ -11,7 +11,18 @@ export default function GroupsPage() {
   useEffect(() => {
     async function fetchGroups() {
       try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/admin/groups`)
+        const token = localStorage.getItem('token')
+        if (!token) {
+          console.warn('🚫 No token found, redirecting to login...')
+          window.location.href = '/login'
+          return
+        }
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/admin/groups`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
 
         const data = await res.json()
         setGroups(data.groups || [])
