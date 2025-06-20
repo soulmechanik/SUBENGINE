@@ -6,6 +6,8 @@ const webhookRoutes = require('./routes/webhook');
 const paymentRoutes = require('./routes/paymentRoutes');
 const paystackRoutes = require('./routes/paystackRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const debugRoutes = require('./routes/debug');
+
 
 const authRoutes = require('./routes/auth')
 require('dotenv').config();
@@ -66,6 +68,7 @@ app.use('/api', paystackRoutes);
 app.use('/api/webhook', webhookRoutes); 
 app.use('/api/auth', authRoutes); 
 app.use('/api/admin', dashboardRoutes);
+app.use('/api/debug', debugRoutes);
 
 
 
