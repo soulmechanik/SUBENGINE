@@ -1,0 +1,118 @@
+/* groups.module.scss */
+
+.container {
+  padding: 2rem;
+  color: #2d3748;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.heading {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loader {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  font-size: 1rem;
+  color: #4a5568;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.tableWrapper {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  min-width: 800px;
+}
+
+.table thead th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: #4a5568;
+  background-color: #f7fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table tbody td {
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.groupTitle {
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.25rem;
+}
+
+.inviteLink {
+  color: #3182ce;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background-color: #ebf8ff;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.inviteLink:hover {
+  background-color: #bee3f8;
+  color: #2c5282;
+}
+
+.ownerEmail {
+  color: #718096;
+  font-size: 0.75rem;
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.active {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background-color: #f0fff4;
+  color: #38a169;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.inactive {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background-color: #fff5f5;
+  color: #e53e3e;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}

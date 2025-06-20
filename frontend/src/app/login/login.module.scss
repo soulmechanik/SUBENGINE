@@ -1,0 +1,259 @@
+// Variables
+$primary-color: #4361ee;
+$primary-hover: #3a56d4;
+$text-color: #2b2d42;
+$light-text: #8d99ae;
+$border-color: #e9ecef;
+$error-color: #ef233c;
+$background-color: #f8f9fa;
+$white: #ffffff;
+$box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+$transition: all 0.3s ease;
+
+// Base styles
+.loginContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 1rem;
+  background-color: $background-color;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 420px;
+  background: $white;
+  border-radius: 12px;
+  padding: 2.5rem;
+  box-shadow: $box-shadow;
+  animation: fadeIn 0.5s ease-out;
+
+  @media (max-width: 480px) {
+    padding: 1.5rem;
+    max-width: 100%;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.logoContainer {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.logo {
+  font-size: 2rem;
+  font-weight: 700;
+  color: $primary-color;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(90deg, #4361ee 0%, #3a0ca3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.tagline {
+  color: $light-text;
+  font-size: 0.875rem;
+  margin-top: 0;
+}
+
+.loginForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inputLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: $text-color;
+}
+
+.inputField {
+  padding: 0.75rem 1rem;
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  transition: $transition;
+
+  &:focus {
+    outline: none;
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+  }
+
+  &::placeholder {
+    color: $light-text;
+  }
+}
+
+.optionsContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.rememberMe {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: $primary-color;
+  cursor: pointer;
+}
+
+.rememberMeLabel {
+  color: $light-text;
+  cursor: pointer;
+}
+
+.forgotPassword {
+  color: $primary-color;
+  text-decoration: none;
+  font-weight: 500;
+  transition: $transition;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.loginButton {
+  padding: 0.75rem;
+  background-color: $primary-color;
+  color: $white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: $transition;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 46px;
+
+  &:hover {
+    background-color: $primary-hover;
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.loading {
+  background-color: $primary-hover;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: $white;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 1rem 0;
+  color: $light-text;
+  font-size: 0.875rem;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid $border-color;
+  }
+
+  &::before {
+    margin-right: 0.5rem;
+  }
+
+  &::after {
+    margin-left: 0.5rem;
+  }
+}
+
+.socialLogin {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.socialButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  background-color: $white;
+  color: $text-color;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: $transition;
+
+  &:hover {
+    background-color: darken($white, 2%);
+  }
+}
+
+.socialIcon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.signupText {
+  text-align: center;
+  font-size: 0.875rem;
+  color: $light-text;
+  margin-top: 1rem;
+}
+
+.signupLink {
+  color: $primary-color;
+  font-weight: 500;
+  text-decoration: none;
+  transition: $transition;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

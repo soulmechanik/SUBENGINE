@@ -8,6 +8,7 @@ export default function SuccessClient() {
   const searchParams = useSearchParams()
   const [status, setStatus] = useState('checking')
   const [isLoading, setIsLoading] = useState(true)
+  const [inviteLink, setInviteLink] = useState(null)
 
   const reference = searchParams.get('reference')
   const groupId = searchParams.get('groupId')
@@ -23,8 +24,11 @@ export default function SuccessClient() {
           body: JSON.stringify({ reference, status: 'successful', transactionRef: reference })
         })
 
+        const data = await res.json()
+
         if (res.ok) {
           setStatus('success')
+          if (data.inviteLink) setInviteLink(data.inviteLink)
         } else {
           setStatus('failed')
         }
@@ -67,9 +71,16 @@ export default function SuccessClient() {
                 <p><strong>Reference:</strong> {reference}</p>
                 <p><strong>Amount:</strong> ₦{amount}</p>
               </div>
-              <button className={styles.actionButton}>Continue to Dashboard</button>
+              {inviteLink ? (
+                <a href={inviteLink} target="_blank" rel="noopener noreferrer">
+                  <button className={styles.actionButton}>Continue to Join Group</button>
+                </a>
+              ) : (
+                <p className={styles.notice}>Group link unavailable. Please contact support.</p>
+              )}
             </div>
           )}
+
           {status === 'failed' && (
             <div className={styles.failedState}>
               <div className={styles.iconContainer}>
