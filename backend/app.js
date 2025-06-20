@@ -21,14 +21,15 @@ const allowedOrigins = [
 
 // CORS options
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.error('❌ Blocked CORS origin:', origin);
-      callback(new Error('CORS not allowed from this origin: ' + origin));
-    }
-  },
+origin: function (origin, callback) {
+  if (!origin || allowedOrigins.some(o => origin.startsWith(o))) {
+    callback(null, true);
+  } else {
+    console.error('❌ Blocked CORS origin:', origin);
+    callback(new Error('CORS not allowed from this origin: ' + origin));
+  }
+},
+
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-bani-signature'],
   credentials: true,
