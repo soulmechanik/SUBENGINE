@@ -140,12 +140,19 @@ function setupGroupAccessHandlers(bot) {
   // 2. Handle users added manually or by invite link
   bot.on('message', async (ctx) => {
     if (ctx.message?.new_chat_members?.length > 0) {
-      for (const member of ctx.message.new_chat_members) {
-        const userId = String(member.id);
-        const chatId = String(ctx.chat.id);
-        console.log(`👋 User ${userId} joined group ${chatId}`);
-        await enforceAccess(ctx.telegram, userId, chatId);
-      }
+     for (const member of ctx.message.new_chat_members) {
+  const userId = String(member.id);
+  const chatId = String(ctx.chat.id);
+
+  // ✅ Skip the bot itself to avoid self-kicking
+  if (userId === String(ctx.botInfo?.id)) {
+    console.log('🤖 Skipping self in new_chat_members');
+    continue;
+  }
+
+  console.log(`👋 User ${userId} joined group ${chatId}`);
+  await enforceAccess(ctx.telegram, userId, chatId);
+}
     }
   });
 
