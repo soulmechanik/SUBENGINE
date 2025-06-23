@@ -10,6 +10,13 @@ dotenv.config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
+// ✅ Get bot info once to avoid self-kicking and store it globally
+
+bot.telegram.getMe().then((botInfo) => {
+  bot.botInfo = botInfo;
+  console.log(`🤖 Bot username: @${botInfo.username}, ID: ${botInfo.id}`);
+});
+
 const checkSubscriptions = require('../backend/utils/subscriptionChecker');
 const sessions = {};
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -159,18 +166,28 @@ bot.start(async (ctx) => {
 
   ctx.session.step = 'awaiting_role';
   return ctx.reply(
-    '👋 Welcome to SubEngine!\n\nAre you a group owner or a subscriber?',
-    {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: 'Group Owner', callback_data: 'role_group_owner' },
-            { text: 'Subscriber', callback_data: 'role_subscriber' }
-          ]
+  '👋 Welcome to SubEngine!\n\n' +
+  'SubEngine helps you manage and monetize your Telegram groups with ease. Here’s what we offer:\n\n' +
+  '✅ Accept both Naira and Crypto payments\n' +
+  '✅ Generate unique invite links for each paid subscriber\n' +
+  '✅ Automatically kick users when their subscription expires\n' +
+  '✅ Need help? Contact support: @SE_support_subengine\n\n' +
+  '🔔 *Note:*\n' +
+  '✅ SubEngine charges a 6% commission on every payment\n' +
+  '✅ Payouts to creators are made the next day after payment\n\n\n' + // ← Two line breaks here
+  'Are you a group owner or a subscriber?',
+  {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: 'Group Owner', callback_data: 'role_group_owner' },
+          { text: 'Subscriber', callback_data: 'role_subscriber' }
         ]
-      }
+      ]
     }
-  );
+  }
+);
+
 });
 
 bot.command('configure', async (ctx) => {
